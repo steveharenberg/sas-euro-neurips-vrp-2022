@@ -24,12 +24,19 @@ else
    echo "From Argument 3: numWorkerProcesses: $numWorkerProcesses"
 fi
 
+if [[ $# -lt 4 ]];then
+   staticFlag="" # set to "--static" for static or "" for dynamic
+   echo "No 4th argument. Solving dynamic."
+else
+   staticFlag=$4 # set to "--static" for static or "" for dynamic
+   echo "From Argument 4: staticFlag: $staticFlag"
+fi
+
 # Global Parameters
 instanceDir=instances/ # relative path to instance data files
 resultDir=results/ # relative parent directory to save results files (will create a subdir based on the local git branch name)
 
 # Controller Parameters
-staticFlag="--static" # set to "--static" for static or "" for dynamic
 epochTime=5 # time limit for one epoch
 
 # Solver-specific Parameters

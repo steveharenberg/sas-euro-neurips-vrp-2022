@@ -33,7 +33,7 @@ staticFlag="--static" # set to "--static" for static or "" for dynamic
 epochTime=5 # time limit for one epoch
 
 # Solver-specific Parameters
-strategy=greedy
+strategy=random
 verboseFlag=""
 
 # Read the list of instances

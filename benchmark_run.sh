@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [[ $# -eq 0 ]];then
-   echo "ERROR: No arguments! usage: benchmark_run.sh instanceList [numWokers]"
+   echo "ERROR: No arguments! usage: benchmark_run.sh instanceList [branchTag] [numWokers]"
    exit
 else
    instanceList=$1 # text file containing instances separated by newline
@@ -9,11 +9,19 @@ else
 fi
 
 if [[ $# -lt 2 ]];then
+   branchTag=`git rev-parse --abbrev-ref HEAD` # Get name of current branch
+   echo "Default branchTag: $branchTag"
+else
+   branchTag=$2 # Get name of current branch. Used as the subdir of the results directory
+   echo "From Argument 2: branchTag: $branchTag"
+fi
+
+if [[ $# -lt 3 ]];then
    numWorkerProcesses=1 # parallelism degree. This many processes will spawn simultaneously
    echo "Default numWorkerProcesses: $numWorkerProcesses"
 else
-   numWorkerProcesses=$2 # parallelism degree. This many processes will spawn simultaneously
-   echo "From Argument 2: numWorkerProcesses: $numWorkerProcesses"
+   numWorkerProcesses=$3 # parallelism degree. This many processes will spawn simultaneously
+   echo "From Argument 3: numWorkerProcesses: $numWorkerProcesses"
 fi
 
 # Global Parameters
@@ -34,10 +42,10 @@ num_instances=${#instances[@]}
 echo "Number of instances: ${num_instances}"
 
 # Get name of current branch
-currentBranch=`git rev-parse --abbrev-ref HEAD`/
+branchSubDir=${branchTag}/
 
 # Create a directory for output
-mkdir -p $resultDir$currentBranch
+mkdir -p $resultDir$branchSubDir
 
 # Start timer
 SECONDS=0
@@ -52,7 +60,7 @@ for i in $(seq 0 $numWorkerProcesses $num_instances); do
     for j in $(seq 0 $numWorkerProcesses); do
         let "idx = $i + $j"
         if [ $idx -lt $num_instances ]; then
-            fname="${resultDir}${currentBranch}${instances[$idx]}"
+            fname="${resultDir}${branchSubDir}${instances[$idx]}"
             python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py --strategy ${strategy} ${verboseFlag} > $fname & 
         fi
     done

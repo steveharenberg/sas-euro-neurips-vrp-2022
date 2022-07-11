@@ -40,7 +40,7 @@ resultDir=results/ # relative parent directory to save results files (will creat
 epochTime=5 # time limit for one epoch
 
 # Solver-specific Parameters
-strategy=greedy
+strategy=lazy
 verboseFlag=""
 
 # Read the list of instances

@@ -1,7 +1,9 @@
 #!/bin/bash
 
+# TODO: implement keyword parameters, positional parameters are not very convenient
+
 if [[ $# -eq 0 ]];then
-   echo "ERROR: No arguments! usage: benchmark_run.sh instanceList [branchTag] [numWokers]"
+   echo "ERROR: No arguments! usage: benchmark_run.sh instanceList [branchTag] [numWokers] [--static]"
    exit
 else
    instanceList=$1 # text file containing instances separated by newline
@@ -37,7 +39,8 @@ instanceDir=instances/ # relative path to instance data files
 resultDir=results/ # relative parent directory to save results files (will create a subdir based on the local git branch name)
 
 # Controller Parameters
-epochTime=5 # time limit for one epoch
+# TODO: make this a script parameter
+epochTime=5 # time limit for one epoch 
 
 # Solver-specific Parameters
 strategy=greedy

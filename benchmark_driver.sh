@@ -2,6 +2,6 @@
 
 tempBranch=`git rev-parse --abbrev-ref HEAD`
 
-eval $(git for-each-ref --shell   --format='echo %(refname); git checkout --quiet %(refname); ./benchmark_run.sh instances_10.txt %(refname:lstrip=2) 6;'   refs/heads/strategy*)
+eval $(git for-each-ref --shell --format='echo %(refname); git checkout --quiet %(refname); bash ./benchmark_run.sh instances_10.txt $(basename %(refname)) 6;' refs/heads/strategy*)
 
 git checkout $tempBranch

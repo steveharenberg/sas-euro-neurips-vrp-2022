@@ -11,8 +11,38 @@ import tools
 from environment import VRPEnvironment, ControllerEnvironment
 from baselines.strategies import STRATEGIES
 
+ALL_HGS_ARGS = [
+    "nbGranular",
+    "fractionGeneratedNearest",
+    "fractionGeneratedFurthest",
+    "fractionGeneratedSweep",
+    "fractionGeneratedRandomly",
+    "minSweepFillPercentage",
+    "maxToleratedCapacityViolation",
+    "maxToleratedTimeWarp",
+    "initialTimeWarpPenalty",
+    "penaltyBooster",
+    "minimumPopulationSize",
+    "generationSize",
+    "nbElite",
+    "nbClose",
+    "targetFeasible",
+    "repairProbability",
+    "growNbGranularAfterNonImprovementIterations",
+    "growNbGranularAfterIterations",
+    "growNbGranularSize",
+    "growPopulationAfterNonImprovementIterations",
+    "growPopulationAfterIterations",
+    "growPopulationSize",
+    "intensificationProbabilityLS",
+    "diversityWeight",
+    "useSwapStarTW",
+    "skipSwapStarDist",
+    "circleSectorOverlapToleranceDegrees",
+    "minCircleSectorSizeDegrees",
+]
 
-def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1):
+def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
 
     # Prevent passing empty instances to the static solver, e.g. when
     # strategy decides to not dispatch any requests for the current epoch
@@ -37,10 +67,19 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1):
     assert os.path.isfile(executable), f"HGS executable {executable} does not exist!"
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
     # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
-    with subprocess.Popen([
+    argList = [
                 executable, instance_filename, str(max(time_limit - 2, 1)), 
                 '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
-            ], stdout=subprocess.PIPE, text=True) as p:
+            ]
+    
+    # Add all the tunable HGS args
+    if args is not None:
+        vargs = vars(args)
+        for hgs_arg in ALL_HGS_ARGS:
+            if vargs[hgs_arg] is not None:
+                argList += [f'-{hgs_arg}', str(vargs[hgs_arg])]
+
+    with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
             line = line.strip()
@@ -121,7 +160,7 @@ def run_baseline(args, env, oracle_solution=None):
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
             # we will exactly use the solver_seed whereas in the dynamic problem randomness is in the instance
-            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed))
+            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
 
@@ -168,6 +207,37 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_tlim", type=int, default=120, help="Time limit per epoch")
     parser.add_argument("--tmp_dir", type=str, default=None, help="Provide a specific directory to use as tmp directory (useful for debugging)")
     parser.add_argument("--verbose", action='store_true', help="Show verbose output")
+
+    parser.add_argument("--nbGranular", type=int)
+    parser.add_argument("--fractionGeneratedNearest", type=float)
+    parser.add_argument("--fractionGeneratedFurthest", type=float)
+    parser.add_argument("--fractionGeneratedSweep", type=float)
+    parser.add_argument("--fractionGeneratedRandomly", type=float)
+    parser.add_argument("--minSweepFillPercentage", type=int)
+    parser.add_argument("--maxToleratedCapacityViolation", type=int)
+    parser.add_argument("--maxToleratedTimeWarp", type=int)
+    parser.add_argument("--initialTimeWarpPenalty", type=float)
+    parser.add_argument("--penaltyBooster", type=float)
+    parser.add_argument("--minimumPopulationSize", type=int)
+    parser.add_argument("--generationSize", type=int)
+    parser.add_argument("--nbElite", type=int)
+    parser.add_argument("--nbClose", type=int)
+    parser.add_argument("--targetFeasible", type=float)
+    parser.add_argument("--repairProbability", type=int)
+    parser.add_argument("--growNbGranularAfterNonImprovementIterations", type=int)
+    parser.add_argument("--growNbGranularAfterIterations", type=int)
+    parser.add_argument("--growNbGranularSize", type=int)
+    parser.add_argument("--growPopulationAfterNonImprovementIterations", type=int)
+    parser.add_argument("--growPopulationAfterIterations", type=int)
+    parser.add_argument("--growPopulationSize", type=int)
+    parser.add_argument("--intensificationProbabilityLS", type=int)
+    parser.add_argument("--diversityWeight", type=float)
+    parser.add_argument("--useSwapStarTW", type=int)
+    parser.add_argument("--skipSwapStarDist", type=int)
+    parser.add_argument("--circleSectorOverlapToleranceDegrees", type=int)
+    parser.add_argument("--minCircleSectorSizeDegrees", type=int)
+
+
     args = parser.parse_args()
 
     if args.tmp_dir is None:

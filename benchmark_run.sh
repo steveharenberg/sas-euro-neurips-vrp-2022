@@ -71,7 +71,7 @@ for i in $(seq 0 $numWorkerProcesses $num_instances); do
         let "idx = $i + $j"
         if [ $idx -lt $num_instances ]; then
             fname="${resultDir}${branchSubDir}${instances[$idx]}"
-            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py --strategy ${strategy} ${verboseFlag} > $fname & 
+            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py --strategy ${strategy} ${verboseFlag} "${@:5}" > $fname & 
         fi
     done
     wait

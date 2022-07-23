@@ -237,8 +237,7 @@ if __name__ == "__main__":
     parser.add_argument("--circleSectorOverlapToleranceDegrees", type=int)
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
 
-
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
     if args.tmp_dir is None:
         # Generate random tmp directory

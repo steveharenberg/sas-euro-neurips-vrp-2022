@@ -1,46 +1,66 @@
 #!/bin/bash
 
-# TODO: implement keyword parameters, positional parameters are not very convenient
+PASSTHRU_ARGS="${@}"
 
-if [[ $# -eq 0 ]];then
-   echo "ERROR: No arguments! usage: benchmark_run.sh instanceList [branchTag] [numWokers] [--static]"
-   exit
-else
-   instanceList=$1 # text file containing instances separated by newline
-   echo "From Argument 1: instanceList: $instanceList"
-fi
 
-if [[ $# -lt 2 ]];then
-   branchTag=`git rev-parse --abbrev-ref HEAD` # Get name of current branch
-   echo "Default branchTag: $branchTag"
-else
-   branchTag=$2 # Get name of current branch. Used as the subdir of the results directory
-   echo "From Argument 2: branchTag: $branchTag"
-fi
+SHORT=i:,t:,n:,e:,s,h
+LONG=instanceList:,resultTag:,numWorkerProcesses:,epochTime:,static,help
+OPTS=$(getopt -q --alternative --name benchmark_run --options $SHORT --longoptions $LONG -- "$@")
+eval set -- "$OPTS"
 
-if [[ $# -lt 3 ]];then
-   numWorkerProcesses=1 # parallelism degree. This many processes will spawn simultaneously
-   echo "Default numWorkerProcesses: $numWorkerProcesses"
-else
-   numWorkerProcesses=$3 # parallelism degree. This many processes will spawn simultaneously
-   echo "From Argument 3: numWorkerProcesses: $numWorkerProcesses"
-fi
+# extract options and their arguments into variables.
+staticFlag=""
 
-if [[ $# -lt 4 ]];then
-   staticFlag="" # set to "--static" for static or "" for dynamic
-   echo "No 4th argument. Solving dynamic."
-else
-   staticFlag=$4 # set to "--static" for static or "" for dynamic
-   echo "From Argument 4: staticFlag: $staticFlag"
-fi
+function usage {
+        echo "./$(basename $0) -i instanceList -t resultTag [-n numWorkerProcesses] [-s] [tuning parameters passed to solver.py]"
+        echo "-i: used to specify list of instances (required). This should be a newline-separated text file with one instance filename per line."
+        echo "-t: used to specify a tag (required). The result files will be placed in a subdirectory with this name."
+        echo "-n: used to specify the number of concurrent processes (default=6)."
+        echo "-e: used to specify the maximum seconds per epoch (default=5)."
+        echo "-s: used to specify static run. Omit to run dynamic."
+        echo "-h: used to display the help menu"
+}
 
 # Global Parameters
-instanceDir=instances/ # relative path to instance data files
-resultDir=results/ # relative parent directory to save results files (will create a subdir based on the local git branch name)
+unset -v instanceList
+unset -v resultTag
+numWorkerProcesses=6
+staticFlag=""
 
 # Controller Parameters
-# TODO: make this a script parameter
 epochTime=5 # time limit for one epoch 
+
+while true ; do
+case "$1" in
+-i|--instanceList)
+instanceList=$2 ; shift 2 ;;
+-t|--resultTag)
+resultTag=$2 ; shift 2 ;;
+-n|--numWorkerProcesses)
+numWorkerProcesses=$2 ; shift 2 ;;
+-e|--epochTime)
+epochTime=$2 ; shift 2 ;;
+-s|--static)
+staticFlag="--static" ; shift ;;
+-h|--help)
+usage ; exit ;;
+\?) shift ; break ;;
+*) shift ; break ;;
+esac
+done
+
+if [ -z "$instanceList" ]; then
+        echo 'Missing -i' >&2
+        exit 1
+fi
+if [ -z "$resultTag" ]; then
+        echo 'Missing -t' >&2
+        exit 1
+fi
+
+# Global Parameters (hardcoded)
+instanceDir=instances/ # relative path to instance data files
+resultDir=results/ # relative parent directory to save results files (will create a subdir based on the local git branch name)
 
 # Solver-specific Parameters
 strategy=greedy
@@ -52,10 +72,10 @@ num_instances=${#instances[@]}
 echo "Number of instances: ${num_instances}"
 
 # Get name of current branch
-branchSubDir=${branchTag}/
+resultSubDir=${resultTag}/
 
 # Create a directory for output
-mkdir -p $resultDir$branchSubDir
+mkdir -p $resultDir$resultSubDir
 
 # Start timer
 SECONDS=0
@@ -70,8 +90,8 @@ for i in $(seq 0 $numWorkerProcesses $num_instances); do
     for j in $(seq 0 $numWorkerProcesses); do
         let "idx = $i + $j"
         if [ $idx -lt $num_instances ]; then
-            fname="${resultDir}${branchSubDir}${instances[$idx]}"
-            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py --strategy ${strategy} ${verboseFlag} "${@:5}" > $fname & 
+            fname="${resultDir}${resultSubDir}${instances[$idx]}"
+            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py --strategy ${strategy} ${verboseFlag} $PASSTHRU_ARGS > $fname & 
         fi
     done
     wait

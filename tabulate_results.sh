@@ -1,6 +1,7 @@
 resultDir=results/
+prefix=strategy_
 
-strategies=($(ls -1 $resultDir))
+strategies=($(ls -1 $resultDir |grep ^$prefix))
 numStrategies=${#strategies[@]}
 
 for i in $(seq 0 $(($numStrategies - 1))); do

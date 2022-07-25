@@ -17,7 +17,7 @@ for i in $(seq 0 $(($numStrategies - 1))); do
             printf "${strategies[$i]}\t${instances[$j]}\t${cost}\n"
         else
             dest=$1 # table output destination
-            printf "${strategies[$i]}\t${instances[$j]}\t${cost}\n" >>$dest
+            printf "${strategies[$i]}\t${instances[$j]}\t${cost}\n" > $dest
         fi
     done
 done

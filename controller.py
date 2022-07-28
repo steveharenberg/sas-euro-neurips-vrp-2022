@@ -31,6 +31,20 @@ if __name__ == "__main__":
     static_instance = tools.read_vrplib(args.instance)
 
     # Create environment
+
+    # Use contest qualification phase time limits
+    if args.epoch_tlim == 0:
+        if args.static:
+            n_cust = len(static_instance['duration_matrix'])
+            if n_cust < 300:
+                args.epoch_tlim = 3*60
+            elif n_cust < 500:
+                args.epoch_tlim = 5*60
+            else:
+                args.epoch_tlim = 8*60
+        else:
+            args.epoch_tlim = 1*60
+    
     env = VRPEnvironment(args.instance_seed, static_instance, args.epoch_tlim, args.static)
 
     done = False

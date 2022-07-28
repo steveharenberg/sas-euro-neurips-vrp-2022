@@ -28,7 +28,7 @@ numWorkerProcesses=6
 staticFlag=""
 
 # Controller Parameters
-epochTime=5 # time limit for one epoch 
+epochTime=0 # time limit for one epoch 
 
 while true ; do
 case "$1" in

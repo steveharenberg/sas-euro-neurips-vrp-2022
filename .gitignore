@@ -1,5 +1,7 @@
 .vscode
 .flake8
 tmp
+hidden
+nohup.out
 results
 __pycache__

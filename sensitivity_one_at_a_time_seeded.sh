@@ -11,6 +11,7 @@ epochTime=60
 # perturb parameters from defaults, one at a time
 
 for SOLVER_SEED in 1 2 3 4 5
+   do
    for PARAM in fractionGeneratedNearest fractionGeneratedFurthest fractionGeneratedSweep
    do
       for VALUE in 0.0 0.025 0.1 0.5

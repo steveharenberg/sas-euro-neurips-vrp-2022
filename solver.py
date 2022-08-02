@@ -155,7 +155,10 @@ def run_baseline(args, env, oracle_solution=None):
         else:
             # Select the requests to dispatch using the strategy
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
-            epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
+            if args.strategy == "random":
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, p=args.randomprob)
+            else:
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
 
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
@@ -236,6 +239,8 @@ if __name__ == "__main__":
     parser.add_argument("--skipSwapStarDist", type=int)
     parser.add_argument("--circleSectorOverlapToleranceDegrees", type=int)
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
+
+    parser.add_argument("--randomprob", type=float, default=0.5)
 
     args, unknown = parser.parse_known_args()
 

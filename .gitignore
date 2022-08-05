@@ -3,6 +3,7 @@
 tmp
 hidden
 nohup.out
+test.py
 results
 __pycache__
 submissions

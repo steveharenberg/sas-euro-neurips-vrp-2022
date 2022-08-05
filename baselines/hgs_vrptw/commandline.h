@@ -151,6 +151,8 @@ public:
 					config.circleSectorOverlapToleranceDegrees = atoi(argv[i + 1]);
 				else if (std::string(argv[i]) == "-minCircleSectorSizeDegrees")
 					config.minCircleSectorSizeDegrees = atoi(argv[i + 1]);
+				else if (std::string(argv[i]) == "-preprocessTimeWindows")
+					config.preprocessTimeWindows = atoi(argv[i + 1]);	
 				else
 				{
 					// Output error message and help menu to the command line

@@ -113,6 +113,8 @@ public:
 		std::string pathInstance;							// Instance path
 		bool useSymmetricCorrelatedVertices = false;		// When correlation matrix is symmetric
 		bool doRepeatUntilTimeLimit = true;					// When to repeat the algorithm when max nr of iter is reached, but time limit is not
+
+		bool preprocessTimeWindows = false;					// Removes arcs if they violate time windows
 	};
 
 	Config config;						// Stores all the parameter values

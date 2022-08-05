@@ -123,7 +123,7 @@ Params::Params(const CommandLine& cl)
 					// Need to substract the depot from the number of nodes
 					inputFile >> content2 >> nbClients;
 					nbClients--;
-				}
+				}			
 				// Read the type of edge weights
 				else if (content == "EDGE_WEIGHT_TYPE")
 				{
@@ -472,6 +472,30 @@ Params::Params(const CommandLine& cl)
 		
 		// Sort orderProximity (for the specific client)
 		std::sort(orderProximity.begin(), orderProximity.end());
+	}
+
+	if (config.preprocessTimeWindows)
+	{
+		int maxValue = std::numeric_limits<int>::min();
+		for (int i = 0; i <= nbClients; i++)
+			for (int j = 0; j <= nbClients; j++)
+				maxValue = std::max(maxValue, timeCost.get(i, j));
+
+		// HGS fails to run if bigValue was set to std::numeric_limits<int>::max()
+		if (static_cast<size_t>(maxValue) * nbClients < static_cast<size_t>(std::numeric_limits<int>::max()))
+		{
+			int bigValue = maxValue * nbClients;
+			for (int i = 0; i <= nbClients; i++)
+			{
+				for (int j = 0; j <= nbClients; j++)
+				{
+					if (cli[i].earliestArrival + cli[i].serviceDuration + timeCost.get(i, j) > cli[j].latestArrival)
+					{
+						timeCost.set(i, j, bigValue);
+					}
+				}
+			}
+		}
 	}
 
 	// Calculate, for all vertices, the correlation for the nbGranular closest vertices

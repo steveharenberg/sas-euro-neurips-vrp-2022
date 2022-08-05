@@ -29,11 +29,13 @@ def abs_angle_diff(a, b, scale=2*math.pi):
 def _angle(observation: State, rng: np.random.Generator):
     '''Simple heuristic dispatching a fraction of clients with smallest angular separation from the nearest must-go client.'''
     mask = np.copy(observation['must_dispatch'])
+    n_must_go = sum(mask)
+    if n_must_go == 0:
+        mask[1]=True # arbitrarily pick one
     optional = ~mask
     optional[0] = False # depot
     min_optional_to_dispatch = 2
     frac_optional_to_dispatch = 0.80 # TODO: tune
-    n_must_go = sum(mask)
     n_optional = sum(optional)
     if n_optional <= min_optional_to_dispatch:
         return _greedy(observation, rng)

@@ -334,23 +334,23 @@ Params::Params(const CommandLine& cl)
 	{
 		// Safety margin: 30% + 3 more vehicles than the trivial bin packing LB
 		nbVehicles = static_cast<int>(std::ceil(1.3 * totalDemand / vehicleCapacity) + 3.);
-		std::cout << "----- FLEET SIZE WAS NOT SPECIFIED: DEFAULT INITIALIZATION TO " << nbVehicles << " VEHICLES" << std::endl;
+		// SKIPPING std::cout << "----- FLEET SIZE WAS NOT SPECIFIED: DEFAULT INITIALIZATION TO " << nbVehicles << " VEHICLES" << std::endl;
 	}
 	else if (nbVehicles == -1)
 	{
 		nbVehicles = nbClients;
-		std::cout << "----- FLEET SIZE UNLIMITED: SET TO UPPER BOUND OF " << nbVehicles << " VEHICLES" << std::endl;
+		// SKIPPING std::cout << "----- FLEET SIZE UNLIMITED: SET TO UPPER BOUND OF " << nbVehicles << " VEHICLES" << std::endl;
 	}
 	else
 	{
-		std::cout << "----- FLEET SIZE SPECIFIED IN THE COMMANDLINE: SET TO " << nbVehicles << " VEHICLES" << std::endl;
+		// SKIPPING std::cout << "----- FLEET SIZE SPECIFIED IN THE COMMANDLINE: SET TO " << nbVehicles << " VEHICLES" << std::endl;
 	}
 
 	// If the run is a DIMACS run, store the solution in the current folder
 	if (config.isDimacsRun)
 	{
 		config.pathSolution = instanceName + ".sol";
-		std::cout << "DIMACS RUN for instance name " << instanceName << ", writing solution to " << config.pathSolution << std::endl;
+		// SKIPPING std::cout << "DIMACS RUN for instance name " << instanceName << ", writing solution to " << config.pathSolution << std::endl;
 	}
 
 	// For DIMACS runs, or when dynamic parameters have to be used, set more parameter values
@@ -375,7 +375,7 @@ Params::Params(const CommandLine& cl)
 		}
 		// Output if an instance has large routes and a large time window
 		bool hasLargeTW = nbLargeTW > 0;
-		std::cout << "----- HasLargeRoutes: " << hasLargeRoutes << ", HasLargeTW: " << hasLargeTW << std::endl;
+		// SKIPPING std::cout << "----- HasLargeRoutes: " << hasLargeRoutes << ", HasLargeTW: " << hasLargeTW << std::endl;
 		
 		// Set the parameter values based on the characteristics of the instance
 		if (hasLargeRoutes)

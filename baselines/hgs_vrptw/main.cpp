@@ -19,7 +19,7 @@ int main(int argc, char* argv[])
 		CommandLine commandline(argc, argv);
 
 		// Reading the data file and initializing some data structures
-		std::cout << "----- READING DATA SET FROM: " << commandline.config.pathInstance << std::endl;
+		// SKIPPING std::cout << "----- READING DATA SET FROM: " << commandline.config.pathInstance << std::endl;
 		Params params(commandline);
 
 		// Creating the Split and Local Search structures
@@ -27,15 +27,15 @@ int main(int argc, char* argv[])
 		LocalSearch localSearch(&params);
 
 		// Initial population
-		std::cout << "----- INSTANCE LOADED WITH " << params.nbClients << " CLIENTS AND " << params.nbVehicles << " VEHICLES" << std::endl;
-		std::cout << "----- BUILDING INITIAL POPULATION" << std::endl;
+		// SKIPPING std::cout << "----- INSTANCE LOADED WITH " << params.nbClients << " CLIENTS AND " << params.nbVehicles << " VEHICLES" << std::endl;
+		// SKIPPING std::cout << "----- BUILDING INITIAL POPULATION" << std::endl;
 		Population population(&params, &split, &localSearch);
 
 		// Genetic algorithm
-		std::cout << "----- STARTING GENETIC ALGORITHM" << std::endl;
+		// SKIPPING std::cout << "----- STARTING GENETIC ALGORITHM" << std::endl;
 		Genetic solver(&params, &split, &population, &localSearch);
 		solver.run(commandline.config.nbIter, commandline.config.timeLimit);
-		std::cout << "----- GENETIC ALGORITHM FINISHED, TIME SPENT: " << params.getTimeElapsedSeconds() << std::endl;
+		// SKIPPING std::cout << "----- GENETIC ALGORITHM FINISHED, TIME SPENT: " << params.getTimeElapsedSeconds() << std::endl;
 
 		// Export the best solution, if it exist
 		if (population.getBestFound() != nullptr)
@@ -52,11 +52,11 @@ int main(int argc, char* argv[])
 	// Catch exceptions
 	catch (const std::string& e)
 	{ 
-		std::cout << "EXCEPTION | " << e << std::endl;
+		// SKIPPING std::cout << "EXCEPTION | " << e << std::endl;
 	}
 	catch (const std::exception& e)
 	{ 
-		std::cout << "EXCEPTION | " << e.what() << std::endl; 
+		// SKIPPING std::cout << "EXCEPTION | " << e.what() << std::endl; 
 	}
 
 	// Return 0 if the program execution was successfull

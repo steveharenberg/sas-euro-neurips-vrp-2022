@@ -48,7 +48,7 @@ public:
 
 private:
 	// The number of new potential offspring created from one individual
-	static const int numberOfCandidateOffsprings = 4;
+	static const int numberOfCandidateOffsprings = 4; // TODO: TUNE
 
 	Params* params;				// Problem parameters
 	Split* split;				// Split algorithm

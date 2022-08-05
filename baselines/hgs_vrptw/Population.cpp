@@ -72,7 +72,7 @@ void Population::generatePopulation()
 	{
 		if (params->isTimeLimitExceeded())
 		{
-			std::cout << "Time limit during generation of initial population" << std::endl;
+			// SKIPPING std::cout << "Time limit during generation of initial population" << std::endl;
 			printState(-1, -1);
 			return;
 		}
@@ -85,7 +85,7 @@ void Population::generatePopulation()
 	}
 
 	// Output that some individuals have been created
-	std::cout << "Generated " << nofNearestIndividualsToGenerate << " individuals using Nearest" << std::endl;
+	// SKIPPING std::cout << "Generated " << nofNearestIndividualsToGenerate << " individuals using Nearest" << std::endl;
 	printState(-1, -1);
 
 	// Generate some individuals using the FURHEST construction heuristic
@@ -93,7 +93,7 @@ void Population::generatePopulation()
 	{
 		if (params->isTimeLimitExceeded())
 		{
-			std::cout << "Time limit during generation of initial population" << std::endl;
+			// SKIPPING std::cout << "Time limit during generation of initial population" << std::endl;
 			printState(-1, -1);
 			return;
 		}
@@ -106,7 +106,7 @@ void Population::generatePopulation()
 	}
 
 	// Output that some individuals have been created
-	std::cout << "Generated " << nofFurthestIndividualsToGenerate << " individuals using Furthest" << std::endl;
+	// SKIPPING std::cout << "Generated " << nofFurthestIndividualsToGenerate << " individuals using Furthest" << std::endl;
 	printState(-1, -1);
 
 	// Generate some individuals using the SWEEP construction heuristic
@@ -114,7 +114,7 @@ void Population::generatePopulation()
 	{
 		if (params->isTimeLimitExceeded())
 		{
-			std::cout << "Time limit during generation of initial population" << std::endl;
+			// SKIPPING std::cout << "Time limit during generation of initial population" << std::endl;
 			printState(-1, -1);
 			return;
 		}
@@ -126,7 +126,7 @@ void Population::generatePopulation()
 	}
 
 	// Output that some individuals have been created
-	std::cout << "Generated " << nofSweepIndividualsToGenerate << " individuals using Sweep" << std::endl;
+	// SKIPPING std::cout << "Generated " << nofSweepIndividualsToGenerate << " individuals using Sweep" << std::endl;
 	printState(-1, -1);
 
 	// Generate some individuals using a RANDOM strategy
@@ -134,7 +134,7 @@ void Population::generatePopulation()
 	{
 		if (params->isTimeLimitExceeded())
 		{
-			std::cout << "Time limit during generation of initial population" << std::endl;
+			// SKIPPING std::cout << "Time limit during generation of initial population" << std::endl;
 			printState(-1, -1);
 			return;
 		}
@@ -144,7 +144,7 @@ void Population::generatePopulation()
 	}
 
 	// Output that some individuals have been created
-	std::cout << "Generated " << nofRandomIndividualsToGenerate << " individuals Randomly" << std::endl;
+	// SKIPPING std::cout << "Generated " << nofRandomIndividualsToGenerate << " individuals Randomly" << std::endl;
 	printState(-1, -1);
 }
 
@@ -291,7 +291,7 @@ void Population::removeWorstBiasedFitness(SubPopulation& pop)
 
 void Population::restart()
 {
-	std::cout << "----- RESET: CREATING A NEW POPULATION -----" << std::endl;
+	// SKIPPING std::cout << "----- RESET: CREATING A NEW POPULATION -----" << std::endl;
 
 	// Delete all the individuals (feasible and infeasible)
 	for (Individual* indiv : feasibleSubpopulation) {
@@ -482,7 +482,7 @@ void Population::printState(int nbIter, int nbIterNoImprovement)
 	std::printf(" | Div %.2f %.2f", getDiversity(feasibleSubpopulation), getDiversity(infeasibleSubpopulation));
 	std::printf(" | Feas %.2f %.2f", static_cast<double>(std::count(listFeasibilityLoad.begin(), listFeasibilityLoad.end(), true)) / static_cast<double>(listFeasibilityLoad.size()), static_cast<double>(std::count(listFeasibilityTimeWarp.begin(), listFeasibilityTimeWarp.end(), true)) / static_cast<double>(listFeasibilityTimeWarp.size()));
 	std::printf(" | Pen %.2f %.2f", params->penaltyCapacity, params->penaltyTimeWarp);
-	std::cout << std::endl;
+	// SKIPPING std::cout << std::endl;
 }
 
 double Population::getDiversity(const SubPopulation& pop)
@@ -540,14 +540,14 @@ void Population::exportBKS(std::string fileName)
 	std::vector<std::vector<int>> readSolution;
 
 	// Read the current BKS solution from the file
-	std::cout << "----- CHECKING FOR POSSIBLE BKS UPDATE" << std::endl;
+	// SKIPPING std::cout << "----- CHECKING FOR POSSIBLE BKS UPDATE" << std::endl;
 	bool readOK = Individual::readCVRPLibFormat(fileName, readSolution, readCost);
 
 	// Check if the solution of the HGS is better than the current BKS
 	if (bestSolutionOverall.myCostSol.penalizedCost < 1.e29 && (!readOK || bestSolutionOverall.myCostSol.penalizedCost < readCost - MY_EPSILON))
 	{
 		// Write the new BKS (given by the last HGS run) to the file
-		std::cout << "----- NEW BKS: " << bestSolutionOverall.myCostSol.penalizedCost << " !!!" << std::endl;
+		// SKIPPING std::cout << "----- NEW BKS: " << bestSolutionOverall.myCostSol.penalizedCost << " !!!" << std::endl;
 		bestSolutionOverall.exportCVRPLibFormat(fileName);
 	}
 }
@@ -567,7 +567,7 @@ void Population::exportSearchProgress(std::string fileName, std::string instance
 void Population::exportPopulation(int nbIter, std::string fileName)
 {
 	// Create the file to write to
-	std::cout << "----- EXPORTING POOL IN : " << fileName << std::endl;
+	// SKIPPING std::cout << "----- EXPORTING POOL IN : " << fileName << std::endl;
 	std::ofstream myfile(fileName, std::ios_base::app);
 
 	// Write to the file if possible, otherwise throw an error
@@ -587,7 +587,7 @@ void Population::exportPopulation(int nbIter, std::string fileName)
 	}
 	else
 	{
-		std::cout << "----- IMPOSSIBLE TO OPEN: " << fileName << std::endl;
+		// SKIPPING std::cout << "----- IMPOSSIBLE TO OPEN: " << fileName << std::endl;
 	}
 }
 

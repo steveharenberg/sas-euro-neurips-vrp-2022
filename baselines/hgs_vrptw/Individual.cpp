@@ -161,7 +161,7 @@ double Individual::averageBrokenPairsDistanceClosest(int nbClosest)
 
 void Individual::exportCVRPLibFormat(std::string fileName)
 {
-	std::cout << "----- WRITING SOLUTION WITH VALUE " << myCostSol.penalizedCost << " IN : " << fileName << std::endl;
+	// SKIPPING std::cout << "----- WRITING SOLUTION WITH VALUE " << myCostSol.penalizedCost << " IN : " << fileName << std::endl;
 	std::ofstream myfile(fileName);
 	if (myfile.is_open())
 	{

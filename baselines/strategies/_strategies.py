@@ -39,17 +39,17 @@ def _angle(observation: State,
            min_optional_to_dispatch = 2,
            frac_optional_to_dispatch = 0.80, # TODO: tune
            fixed_angle = None, # in degrees
-           must_go_ratio = None 
+           must_go_ratio = None,
+           n_angles_when_empty=12, # when n_must_go = 0, use this many "must_go" angles
            ):
     '''Simple heuristic dispatching a fraction of clients with smallest angular separation from the nearest must-go client.'''
     mask = np.copy(observation['must_dispatch'])
     n_must_go = sum(mask)
-    if len(mask) < 4: # no decisions to make
+    if len(mask) <= min_optional_to_dispatch + 1: # no decisions to make
         return _greedy(observation, rng)
     if n_must_go == 0:
-        mask[1]=True # arbitrarily pick one
-        frac_optional_to_dispatch = 0.40
-        n_must_go = sum(mask)
+        if n_angles_when_empty == 0:
+            return _lazy(observation, rng)
     optional = ~mask
     optional[0] = False # depot
     n_optional = sum(optional)
@@ -65,7 +65,12 @@ def _angle(observation: State,
     assert is_depot[0], "Assuming depot has index 0!"
     depot_x, depot_y = observation['coords'][0]
     angles = np.array([math.atan2(y - depot_y, x - depot_x) for x, y in observation['coords']])
-    must_go_angles = angles[mask]
+    
+    if n_must_go <= max([1,n_angles_when_empty/2]):
+        angle0 = angles[1] if n_must_go == 0 else angles[mask][0]
+        must_go_angles = [i * math.pi * 2 / n_angles_when_empty + angle0 for i in range(n_angles_when_empty)]
+    else:
+        must_go_angles = angles[mask]
     angle_diffs = np.array([min([abs_angle_diff(a, b) for b in must_go_angles]) for a in angles])
     if fixed_angle is not None:
         # Use a fixed angle to calculate optional dispatches

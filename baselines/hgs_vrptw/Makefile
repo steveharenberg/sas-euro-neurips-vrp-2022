@@ -3,6 +3,7 @@ all : genvrp
 CCC = g++
 # CCC = clang++-10
 CCFLAGS = -Wall -std=c++2a
+CCFLAGS = -Wall -O3 -std=c++2a
 # CCFLAGS = -Wall -std=c++2a -g
 TARGETDIR=.
 

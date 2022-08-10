@@ -40,7 +40,7 @@ def _angle(observation: State,
            frac_optional_to_dispatch = 0.80, # TODO: tune
            fixed_angle = None, # in degrees
            must_go_ratio = None,
-           n_angles_when_empty=12, # when n_must_go = 0, use this many "must_go" angles
+           n_angles_when_empty=0, # when n_must_go = 0, use this many "must_go" angles
            ):
     '''Simple heuristic dispatching a fraction of clients with smallest angular separation from the nearest must-go client.'''
     mask = np.copy(observation['must_dispatch'])
@@ -66,7 +66,7 @@ def _angle(observation: State,
     depot_x, depot_y = observation['coords'][0]
     angles = np.array([math.atan2(y - depot_y, x - depot_x) for x, y in observation['coords']])
     
-    if n_must_go <= max([1,n_angles_when_empty/2]):
+    if n_must_go <= max([0,n_angles_when_empty/2]):
         angle0 = angles[1] if n_must_go == 0 else angles[mask][0]
         must_go_angles = [i * math.pi * 2 / n_angles_when_empty + angle0 for i in range(n_angles_when_empty)]
     else:

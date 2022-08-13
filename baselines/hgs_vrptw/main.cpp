@@ -26,10 +26,13 @@ int main(int argc, char* argv[])
 		Split split(&params);
 		LocalSearch localSearch(&params);
 
+		// Get solutions for warm start
+		Solutions const warmstartSols = params.readWarmstartSolutions();
+
 		// Initial population
 		// SKIPPING std::cout << "----- INSTANCE LOADED WITH " << params.nbClients << " CLIENTS AND " << params.nbVehicles << " VEHICLES" << std::endl;
 		// SKIPPING std::cout << "----- BUILDING INITIAL POPULATION" << std::endl;
-		Population population(&params, &split, &localSearch);
+		Population population(&params, &split, &localSearch, warmstartSols);
 
 		// Genetic algorithm
 		// SKIPPING std::cout << "----- STARTING GENETIC ALGORITHM" << std::endl;

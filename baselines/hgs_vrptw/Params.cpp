@@ -7,6 +7,8 @@
 #include <cmath>
 #include <cstdio>
 
+#include <sstream>
+
 #include "Params.h"
 #include "Matrix.h"
 #include "xorshift128.h"
@@ -576,4 +578,30 @@ void Params::SetCorrelatedVertices(){
 			correlatedVertices[i].push_back(x);
 		}
 	}
+}
+
+Solutions Params::readWarmstartSolutions()
+{
+	Solutions solutions;
+
+	std::ifstream input(config.warmstartFilePath);
+  	if (!input.is_open()) {
+    	return solutions; 
+	}
+
+	for (std::string line; std::getline(input, line); ) {
+		Routes routes;
+		std::stringstream ss1(line);
+		for (std::string routeStr; std::getline(ss1, routeStr, '~'); ) {
+			std::vector<int> route;
+			std::stringstream ss2(routeStr);
+			for (std::string numStr; std::getline(ss2, numStr, ','); ) {
+				route.push_back(std::stoi(numStr));
+			}
+			routes.push_back(route);
+		}
+		solutions.push_back(routes);
+	}
+
+	return solutions;
 }

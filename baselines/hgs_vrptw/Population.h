@@ -52,6 +52,7 @@ private:
 	std::vector<std::pair<clock_t, double>> searchProgress; // Keeps tracks of the time stamps of successive best solutions
 	Individual bestSolutionRestart;							// Best solution found during the current restart of the algorthm
 	Individual bestSolutionOverall;							// Best solution found during the complete execution of the algorithm
+	Solutions const& warmstartSolutions;					// Solutions to warmstart the GA with
 
 	// Evaluates the biased fitness of all individuals in the population
 	void updateBiasedFitnesses(SubPopulation& pop);
@@ -67,7 +68,7 @@ public:
     // Generates the population. Part of the population is generated randomly and the other part using
     // several construction heuristics. There is variety in the individuals that are constructed using
     // the construction heuristics through the parameters used.
-    void generatePopulation();
+	void generatePopulation();
 
 	// Add an individual in the population (survivor selection is automatically triggered whenever the population reaches its maximum size)
 	// Returns TRUE if a new best solution of the run has been found
@@ -118,7 +119,7 @@ public:
 	void logSolution(int nbIter, std::ofstream& myfile, Individual* indiv);
 
 	// Constructor
-	Population(Params* params, Split* split, LocalSearch* localSearch);
+	Population(Params* params, Split* split, LocalSearch* localSearch, Solutions const& warmStartSols);
 
 	// Destructor
 	~Population();

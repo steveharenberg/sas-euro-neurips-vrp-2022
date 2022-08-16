@@ -38,6 +38,9 @@ SOFTWARE.*/
 #define MY_EPSILON 0.00001		// Precision parameter, used to avoid numerical instabilities
 #define PI 3.14159265359		// Number pi, with 11 decimal precision
 
+typedef std::vector<std::vector<int>> Routes;
+typedef std::vector<Routes> Solutions;
+
 // Structure of a Client, including its index, position, and all other variables and parameters
 struct Client
 {
@@ -115,6 +118,7 @@ public:
 		bool doRepeatUntilTimeLimit = true;					// When to repeat the algorithm when max nr of iter is reached, but time limit is not
 
 		bool preprocessTimeWindows = false;					// Removes arcs if they violate time windows
+		std::string warmstartFilePath;							// Path to file with solutions for warmstarting population
 	};
 
 	Config config;						// Stores all the parameter values
@@ -160,6 +164,8 @@ public:
 
 	// Calculate, for all vertices, the correlation for the nbGranular closest vertices
 	void SetCorrelatedVertices();
+
+	Solutions readWarmstartSolutions();
 };
 
 #endif

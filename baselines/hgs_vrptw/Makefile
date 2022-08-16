@@ -5,6 +5,7 @@ CCC = g++
 CCFLAGS = -Wall -std=c++2a
 # CCFLAGS = -Wall -O3 -std=c++2a
 # CCFLAGS = -Wall -std=c++2a -g
+# CCFLAGS = -Wall -std=c++2a -g
 TARGETDIR=.
 
 OBJS2 = \

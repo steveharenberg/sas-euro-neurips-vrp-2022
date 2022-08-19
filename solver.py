@@ -68,8 +68,9 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     assert os.path.isfile(executable), f"HGS executable {executable} does not exist!"
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
     # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
-    argList = [
-                executable, instance_filename, str(max(time_limit - 2, 1)), 
+    hgs_max_time = max(time_limit, 1)
+    argList = [ 'timeout', str(hgs_max_time),
+                executable, instance_filename, str(hgs_max_time), 
                 '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
             ]
     
@@ -176,7 +177,7 @@ def run_baseline(args, env, oracle_solution=None):
 
         # Submit solution to environment
         observation, reward, done, info = env.step(epoch_solution)
-        assert cost is None or reward == -cost, "Reward should be negative cost of solution"
+        assert cost is None or reward == -cost, f"Reward should be negative cost of solution. Reward={reward}, cost={cost}"
         assert not info['error'], f"Environment error: {info['error']}"
         
         total_reward += reward

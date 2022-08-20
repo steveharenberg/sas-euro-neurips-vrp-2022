@@ -2,7 +2,12 @@ all : genvrp
 
 CCC = g++
 # CCC = clang++-10
-CCFLAGS = -Wall -std=c++2a
+
+INLINES:=
+INLINES:=$(INLINES) -finline-functions
+INLINES:=$(INLINES) -finline-limit=100000
+# INLINES:=
+CCFLAGS = -Wall -O -g -std=c++2a $(INLINES)
 # CCFLAGS = -Wall -O3 -std=c++2a
 # CCFLAGS = -Wall -std=c++2a -g
 # CCFLAGS = -Wall -std=c++2a -g
@@ -19,7 +24,7 @@ OBJS2 = \
 
 $(TARGETDIR)/genvrp: $(OBJS2)
 	$(CCC) $(CCFLAGS) -o $(TARGETDIR)/genvrp $(OBJS2)
-	
+
 $(TARGETDIR)/Genetic.o: Genetic.h Genetic.cpp
 	$(CCC) $(CCFLAGS) -c Genetic.cpp -o $(TARGETDIR)/Genetic.o
 
@@ -28,7 +33,7 @@ $(TARGETDIR)/Individual.o: Individual.h Individual.cpp
 
 $(TARGETDIR)/LocalSearch.o: LocalSearch.h LocalSearch.cpp
 	$(CCC) $(CCFLAGS) -c LocalSearch.cpp -o $(TARGETDIR)/LocalSearch.o
-	
+
 $(TARGETDIR)/main.o: main.cpp
 	$(CCC) $(CCFLAGS) -c main.cpp -o $(TARGETDIR)/main.o
 
@@ -53,4 +58,3 @@ clean:
     $(TARGETDIR)/Params.o \
     $(TARGETDIR)/Population.o \
     $(TARGETDIR)/Split.o
-     

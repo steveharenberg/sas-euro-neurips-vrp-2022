@@ -4,6 +4,14 @@
 
 #include <vector>
 
+#if defined (__GNUC__)
+#  define INLINE inline __attribute__((always_inline))
+#elif defined (_MSC_VER)
+#  define INLINE __forceinline
+#else
+#  define INLINE inline
+#endif
+
 // Implementation of a matrix in a C++ vector
 // This class is used because a flat vector is faster than a vector of vectors which requires two lookup operations rather than one to index a matrix element
 class Matrix
@@ -23,13 +31,13 @@ public:
     }
 
     // Set a value val at position (row, col) in the matrix
-    void set(const int row, const int col, const int val)
+    INLINE void set(const int row, const int col, const int val)
     {
         data_[cols_ * row + col] = val;
     }
 
     // Get the value at position (row, col) in the matrix
-    int get(const int row, const int col) const
+    INLINE int get(const int row, const int col) const
     {
         return data_[cols_ * row + col];
     }

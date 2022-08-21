@@ -15,12 +15,12 @@ from solver import run_baseline
 from baselines.strategies import STRATEGIES
 
 DO_FULL_LENGTH = False
-N_FREE_PARAMS = 3 # can vary this many parameters at a time
+MAX_FREE_PARAMS = 3 # can vary this many parameters at a time
 SEEDS = [1,2,3]
 INSTANCE_LIST_FILENAME_25 = 'instances_25.txt'
 INSTANCE_LIST_FILENAME_249 = 'instances_249.txt'
 INSTANCE_LIST_FILENAME_250 = 'instances_249.txt'
-default_params = {'circleSectorOverlapToleranceDegrees': 0, 'diversityWeight': 0, 'fractionGeneratedFurthest': 0.05, 'fractionGeneratedNearest': 0.05, 'fractionGeneratedSweep': 0.05, 'generationSize': 40, 'growNbGranularAfterIterations': 0, 'growNbGranularAfterNonImprovementIterations': 5000, 'growNbGranularSize': 0, 'growPopulationAfterIterations': 0, 'growPopulationAfterNonImprovementIterations': 5000, 'growPopulationSize': 0, 'initialTimeWarpPenalty': 1.0, 'intensificationProbabilityLS': 15, 'maxToleratedCapacityViolation': 50, 'maxToleratedTimeWarp': 100, 'minCircleSectorSizeDegrees': 15, 'minimumPopulationSize': 25, 'minSweepFillPercentage': 60, 'nbClose': 5, 'nbElite': 4, 'nbGranular': 32, 'penaltyBooster': 1.0, 'repairProbability': 50, 'skipSwapStarDist': 0, 'targetFeasible': 0.2, 'useSwapStarTW': 1}
+default_params = {'circleSectorOverlapToleranceDegrees': 0, 'diversityWeight': 0, 'fractionGeneratedFurthest': 0.05, 'fractionGeneratedNearest': 0.05, 'fractionGeneratedSweep': 0.05, 'generationSize': 40, 'growNbGranularAfterIterations': 0, 'growNbGranularAfterNonImprovementIterations': 5000, 'growNbGranularSize': 0, 'growPopulationAfterIterations': 0, 'growPopulationAfterNonImprovementIterations': 5000, 'growPopulationSize': 0, 'initialTimeWarpPenalty': 1.0, 'intensificationProbabilityLS': 15, 'maxToleratedCapacityViolation': 50, 'maxToleratedTimeWarp': 100, 'minCircleSectorSizeDegrees': 15, 'minimumPopulationSize': 25, 'minSweepFillPercentage': 60, 'nbClose': 5, 'nbElite': 4, 'nbGranular': 32, 'penaltyBooster': 1.0, 'repairProbability': 50, 'skipSwapStarDist': 0, 'targetFeasible': 0.2, 'useSwapStarTW': 1, 'preprocessTimeWindows': 0}
 
 
 class AttrDict(dict):
@@ -89,7 +89,7 @@ def objective(trial):
     args["skipSwapStarDist"] = trial.suggest_int("skipSwapStarDist", 0, 1)
     args["circleSectorOverlapToleranceDegrees"] = trial.suggest_int("circleSectorOverlapToleranceDegrees", 0, 90)
     args["minCircleSectorSizeDegrees"] = trial.suggest_int("minCircleSectorSizeDegrees", 2, 90)
-    args["preprocessTimeWindows"] = trial.suggest_int("useSwapStarTW", 0, 1)
+    args["preprocessTimeWindows"] = trial.suggest_int("preprocessTimeWindows", 0, 1)
     print(args)
     avg_reward = 0
     with open(INSTANCE_LIST_FILENAME_25, 'r') as f:
@@ -100,7 +100,7 @@ def objective(trial):
     step = 0
     instances = instances_25
     for instance in instances:
-         trial.report(-avg_reward-k*200000*len(SEEDS), step)
+         trial.report(-avg_reward-step*200000*len(SEEDS), step)
          if trial.should_prune():
             raise optuna.TrialPruned()
          step = step + 1
@@ -116,11 +116,9 @@ def objective(trial):
       args["epoch_tlim"] = 0
       k = 0
       avg_reward = 0
-      instances = instances_249
       for instance in instances:
-         trial.report(-avg_reward, step)
+         trial.report(-avg_reward-(step)*200000*len(SEEDS), step)
          if trial.should_prune():
-            print(f"Trial number {trial.number} pruned at step {step}")
             raise optuna.TrialPruned()
          step = step + 1
          instance = f"instances/{instance.strip()}"
@@ -143,7 +141,7 @@ if __name__ == "__main__":
     # Add stream handler of stdout to show the messages
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     storage_name = "postgresql://localhost:5432/template1"
-    study_name = "hgs_static_fixed_3"
+    study_name = "hgs_static_fixed_4"
     study = optuna.create_study(direction="minimize",
                                 pruner=optuna.pruners.PercentilePruner(
                                  25.0, n_min_trials=4, n_warmup_steps=5, interval_steps=5
@@ -155,12 +153,13 @@ if __name__ == "__main__":
     while True:
       if len([t for t in study.trials if t.state==optuna.trial.TrialState.COMPLETE]) > 0:
          best_params = study.best_params
-         sample_keys = random.sample(best_params.keys(), len(best_params.keys()) - N_FREE_PARAMS)
+         n_free_params = random.randint(1,MAX_FREE_PARAMS)
+         sample_keys = random.sample(best_params.keys(), len(best_params.keys()) - n_free_params)
          fixed_params = {k: best_params[k] for k in sample_keys}
          partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
          print(f"Trying free params: {set(best_params.keys())-set(fixed_params.keys())}")
          study.sampler = partial_sampler
-         study.optimize(objective, n_trials=1)
+         study.optimize(objective, n_trials=10)
       else:
          print("No previous trial completed. Running with default params")
          fixed_params = default_params

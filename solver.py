@@ -67,7 +67,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         executable = executable + '.exe'
     assert os.path.isfile(executable), f"HGS executable {executable} does not exist!"
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
-    # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
+    # No longer need to subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
     hgs_max_time = max(time_limit, 1)
     argList = [ 'timeout', str(hgs_max_time),
                 executable, instance_filename, str(hgs_max_time), 

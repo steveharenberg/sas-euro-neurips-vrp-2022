@@ -6,6 +6,6 @@ num_instances=${#instances[@]}
 
 for i in $(seq 0 $nw)
 do
-   python tune_staged.py &
+   python tune_fixed.py &
 done
 wait

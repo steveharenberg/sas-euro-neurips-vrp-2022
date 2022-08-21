@@ -6,6 +6,7 @@ import sys
 import os
 import uuid
 import platform
+import random
 import numpy as np
 
 import tools
@@ -152,14 +153,15 @@ if __name__ == "__main__":
                                 load_if_exists=True)
  
     while True:
-      try:
+      if len([t for t in study.trials if t.state==optuna.trial.TrialState.COMPLETE]) > 0:
          best_params = study.best_params
          sample_keys = random.sample(best_params.keys(), len(best_params.keys()) - N_FREE_PARAMS)
-         fixed_params = {k: best_params[k] for k in keys}
+         fixed_params = {k: best_params[k] for k in sample_keys}
          partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
+         print(f"Trying free params: {set(best_params.keys())-set(fixed_params.keys())}")
          study.sampler = partial_sampler
          study.optimize(objective, n_trials=1)
-      except:
+      else:
          print("No previous trial completed. Running with default params")
          fixed_params = default_params
          partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)

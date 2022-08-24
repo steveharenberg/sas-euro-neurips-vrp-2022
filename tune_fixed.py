@@ -13,13 +13,13 @@ import tools
 from environment import VRPEnvironment, ControllerEnvironment
 from solver import run_baseline
 from baselines.strategies import STRATEGIES
+from optuna_percentile import PercentilePruner
 
 DO_FULL_LENGTH = False
 MAX_FREE_PARAMS = 3 # can vary this many parameters at a time
 SEEDS = [1,2,3]
 INSTANCE_LIST_FILENAME_25 = 'instances_25.txt'
 INSTANCE_LIST_FILENAME_249 = 'instances_249.txt'
-INSTANCE_LIST_FILENAME_250 = 'instances_249.txt'
 default_params = {'circleSectorOverlapToleranceDegrees': 0, 'diversityWeight': 0, 'fractionGeneratedFurthest': 0.05, 'fractionGeneratedNearest': 0.05, 'fractionGeneratedSweep': 0.05, 'generationSize': 40, 'growNbGranularAfterIterations': 0, 'growNbGranularAfterNonImprovementIterations': 5000, 'growNbGranularSize': 0, 'growPopulationAfterIterations': 0, 'growPopulationAfterNonImprovementIterations': 5000, 'growPopulationSize': 0, 'initialTimeWarpPenalty': 1.0, 'intensificationProbabilityLS': 15, 'maxToleratedCapacityViolation': 50, 'maxToleratedTimeWarp': 100, 'minCircleSectorSizeDegrees': 15, 'minimumPopulationSize': 25, 'minSweepFillPercentage': 60, 'nbClose': 5, 'nbElite': 4, 'nbGranular': 32, 'penaltyBooster': 1.0, 'repairProbability': 50, 'skipSwapStarDist': 0, 'targetFeasible': 0.2, 'useSwapStarTW': 1, 'preprocessTimeWindows': 0}
 
 
@@ -58,7 +58,7 @@ def objective(trial):
     args = AttrDict()
     args["solver_seed"] = 1234
     args["verbose"] = False
-    args["epoch_tlim"] = 10
+    args["epoch_tlim"] = 60
     args["strategy"] = "greedy"
     
     args["fractionGeneratedNearest"] = trial.suggest_float("fractionGeneratedNearest", 0.0, 0.3)
@@ -100,7 +100,7 @@ def objective(trial):
     step = 0
     instances = instances_25
     for instance in instances:
-         trial.report(-avg_reward-step*200000*len(SEEDS), step)
+         trial.report(-avg_reward, step)
          if trial.should_prune():
             raise optuna.TrialPruned()
          step = step + 1
@@ -117,7 +117,7 @@ def objective(trial):
       k = 0
       avg_reward = 0
       for instance in instances:
-         trial.report(-avg_reward-(step)*200000*len(SEEDS), step)
+         trial.report(-avg_reward, step)
          if trial.should_prune():
             raise optuna.TrialPruned()
          step = step + 1
@@ -141,9 +141,9 @@ if __name__ == "__main__":
     # Add stream handler of stdout to show the messages
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     storage_name = "postgresql://localhost:5432/template1"
-    study_name = "hgs_static_fixed_4"
+    study_name = "hgs_static_fixed_7"
     study = optuna.create_study(direction="minimize",
-                                pruner=optuna.pruners.PercentilePruner(
+                                pruner=PercentilePruner(
                                  25.0, n_min_trials=4, n_warmup_steps=5, interval_steps=5
                                 ),
                                 study_name=study_name,
@@ -156,15 +156,14 @@ if __name__ == "__main__":
          n_free_params = random.randint(1,MAX_FREE_PARAMS)
          sample_keys = random.sample(best_params.keys(), len(best_params.keys()) - n_free_params)
          fixed_params = {k: best_params[k] for k in sample_keys}
-         partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
+         partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, optuna.samplers.RandomSampler())
          print(f"Trying free params: {set(best_params.keys())-set(fixed_params.keys())}")
          study.sampler = partial_sampler
-         study.optimize(objective, n_trials=10)
+         study.optimize(objective, n_trials=1)
       else:
          print("No previous trial completed. Running with default params")
          fixed_params = default_params
-         partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, study.sampler)
+         partial_sampler = optuna.samplers.PartialFixedSampler(fixed_params, optuna.samplers.RandomSampler())
          study.sampler = partial_sampler
          study.optimize(objective, n_trials=1)
-      
     print(study.best_trial)

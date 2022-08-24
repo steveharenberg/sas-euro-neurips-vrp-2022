@@ -3,9 +3,12 @@ import argparse
 import subprocess
 import sys
 import os
+import json
 import uuid
 import platform
 import numpy as np
+import time
+import copy
 
 import tools
 from environment import VRPEnvironment, ControllerEnvironment
@@ -44,6 +47,10 @@ ALL_HGS_ARGS = [
 ]
 
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
+    time_limit = time_limit
+    start_time = time.time()
+    vroom_timelimit = int(min(time_limit * args.warmstartTimeFraction, args.maxWarmstartTime))
+    best_cost = float("inf")
 
     # Prevent passing empty instances to the static solver, e.g. when
     # strategy decides to not dispatch any requests for the current epoch
@@ -58,20 +65,84 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         return
 
     os.makedirs(tmp_dir, exist_ok=True)
+
+    instance_filename_json = os.path.join(tmp_dir, "problem.json")
+
+    # Call VROOM solver
+    warmstart_filepath = os.path.join(tmp_dir, "warmstart")
+    executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
+    # executable = tools.which('vroom')
+    
+    assert executable is not None, f"VROOM executable {executable} does not exist!"
+    costs = [] # stores all vroom solution costs
+    fout = open(warmstart_filepath, "w")    # this file stores are vroom solutions to get fed into HGS
+    instancetmp = copy.deepcopy(instance)   # this is an instance whose duration matrix gets updated so vroom produces new results
+    time_remaining = vroom_timelimit - (time.time() - start_time)
+    while time_remaining > 0:
+        tools.write_json(instance_filename_json, instancetmp)        
+        with subprocess.Popen([
+                    executable, '-i', instance_filename_json,
+                    '-l', str(time_remaining),
+                    '-x', str(args.exploreLevel),
+                    '-t', '1' # single threaded
+                ], stdout=subprocess.PIPE, text=True) as p:
+            routes = []
+            try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
+                for line in p.stdout:
+                    line = line.strip()
+                    vroom_output = json.loads(line)
+                    cost = int(vroom_output["summary"]["cost"])
+                    costs.append(cost)
+                    for route in vroom_output["routes"]:
+                        routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
+                    if cost < best_cost:
+                        best_cost = cost
+                        yield routes, cost
+            except:
+                break
+            
+            # String to output to warmstart file
+            routeStr = ",".join(str(v) for v in routes[0])
+            for route in routes[1:]:
+                routeStr += "~"
+                routeStr += ",".join(str(v) for v in route)
+            fout.write(routeStr + "\n")
+            
+            # Make a link from each route invalid so we get different routes on subsequent calls
+            # We could do less or more here, parameterize this?
+            for route in routes:
+                maxLink = None
+                maxCost = None
+                samples = np.random.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
+                for i in samples:
+                    linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
+                    instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
+                #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
+                #         maxLink = (route[i], route[i+1])
+                #         maxCost = linkCost
+                # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
+            
+            time_remaining = vroom_timelimit - (time.time() - start_time)
+
+    fout.close()
+    print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}", file=sys.__stderr__)
+    
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)
-    
     executable = os.path.join('baselines', 'hgs_vrptw', 'genvrp')
     # On windows, we may have genvrp.exe
     if platform.system() == 'Windows' and os.path.isfile(executable + '.exe'):
         executable = executable + '.exe'
     assert os.path.isfile(executable), f"HGS executable {executable} does not exist!"
+
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
-    # No longer need to subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
-    hgs_max_time = max(time_limit, 1)
+    # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
+    hgs_timelimit = int(max(time_limit - (time.time()-start_time), 1))
+    hgs_max_time = max(hgs_timelimit, 1)
     argList = [ 'timeout', str(hgs_max_time),
                 executable, instance_filename, str(hgs_max_time), 
-                '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
+                '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1',
+                '-warmstartFilePath', warmstart_filepath
             ]
     
     # Add all the tunable HGS args
@@ -95,9 +166,11 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 # End of solution
                 solution = routes
                 cost = int(line.split(" ")[-1].strip())
-                check_cost = tools.validate_static_solution(instance, solution)
-                assert cost == check_cost, "Cost of HGS VRPTW solution could not be validated"
-                yield solution, cost
+                if cost < best_cost:
+                    check_cost = tools.validate_static_solution(instance, solution)
+                    assert cost == check_cost, "Cost of HGS VRPTW solution could not be validated"
+                    yield solution, cost
+                    best_cost = cost
                 # Start next solution
                 routes = []
             elif "EXCEPTION" in line:
@@ -190,7 +263,7 @@ def run_baseline(args, env, oracle_solution=None):
 
         # Submit solution to environment
         observation, reward, done, info = env.step(epoch_solution)
-        assert cost is None or reward == -cost, f"Reward should be negative cost of solution. Reward={reward}, cost={cost}"
+        assert cost is None or reward == -cost, f"Reward should be negative cost of solution {reward}!={-cost}"
         assert not info['error'], f"Environment error: {info['error']}"
         
         total_reward += reward
@@ -252,6 +325,9 @@ if __name__ == "__main__":
     parser.add_argument("--circleSectorOverlapToleranceDegrees", type=int)
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
+    parser.add_argument("--exploreLevel", type=int, default=0)
+    parser.add_argument("--warmstartTimeFraction", type=float, default=0.2)
+    parser.add_argument("--maxWarmstartTime", type=float, default=float('inf'))
 
     args, unknown = parser.parse_known_args()
 

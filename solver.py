@@ -139,6 +139,19 @@ def run_baseline(args, env, oracle_solution=None):
     # Note: info contains additional info that can be used by your solver
     observation, static_info = env.reset()
     epoch_tlim = static_info['epoch_tlim']
+    # Use contest qualification phase time limits
+    if epoch_tlim == 0:
+        if static_info['start_epoch'] == static_info['end_epoch']:
+            epoch_instance = observation['epoch_instance']
+            n_cust = len(epoch_instance['request_idx']) - 1
+            if n_cust < 300:
+                args.epoch_tlim = 3*60
+            elif n_cust < 500:
+                args.epoch_tlim = 5*60
+            else:
+                args.epoch_tlim = 8*60
+        else:
+            args.epoch_tlim = 1*60
     num_requests_postponed = 0
     while not done:
         epoch_instance = observation['epoch_instance']

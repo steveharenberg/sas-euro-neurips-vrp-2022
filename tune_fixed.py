@@ -58,7 +58,7 @@ def objective(trial):
     args = AttrDict()
     args["solver_seed"] = 1234
     args["verbose"] = False
-    args["epoch_tlim"] = 60
+    args["epoch_tlim"] = 0
     args["strategy"] = "greedy"
     
     args["fractionGeneratedNearest"] = trial.suggest_float("fractionGeneratedNearest", 0.0, 0.3)
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     # Add stream handler of stdout to show the messages
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     storage_name = "postgresql://localhost:5432/template1"
-    study_name = "hgs_static_fixed_7"
+    study_name = "hgs_static_fixed_8"
     study = optuna.create_study(direction="minimize",
                                 pruner=PercentilePruner(
                                  25.0, n_min_trials=4, n_warmup_steps=5, interval_steps=5

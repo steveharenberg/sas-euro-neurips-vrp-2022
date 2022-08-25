@@ -12,10 +12,11 @@ epochTime=0
 # EXTRA_ARGS="--circleSectorOverlapToleranceDegrees 5 --diversityWeight 0.140847761396352 --fractionGeneratedFurthest 0.158759198979329 --fractionGeneratedNearest 0.0914064233972187 --fractionGeneratedSweep 0.0186357311195463 --generationSize 85 --growNbGranularAfterIterations 0 --growNbGranularAfterNonImprovementIterations 20 --growNbGranularSize 14 --growPopulationAfterIterations 5 --growPopulationAfterNonImprovementIterations 18 --growPopulationSize 17 --initialTimeWarpPenalty 3.17921598516315 --intensificationProbabilityLS 85 --maxToleratedCapacityViolation 6 --maxToleratedTimeWarp 162 --minCircleSectorSizeDegrees 65 --minimumPopulationSize 10 --minSweepFillPercentage 77 --nbClose 9 --nbElite 16 --nbGranular 32 --penaltyBooster 1.96319438091081 --repairProbability 97 --skipSwapStarDist 0 --targetFeasible 0.221141499089876 --useSwapStarTW 1"
 # EXTRA_ARGS="--fractionGeneratedFurthest 0.0297427769063673 --maxToleratedCapacityViolation 56 --diversityWeight 0.0549103294641657"
 # EXTRA_ARGS="--skipSwapStarDist 1 --repairProbability 70 --fractionGeneratedNearest 0.145103803784702 --intensificationProbabilityLS 63 --targetFeasible 0.152474047152356 --generationSize 23 --growPopulationAfterIterations 18 --growNbGranularAfterIterations 16 --fractionGeneratedSweep 0.222938291216638 --useSwapStarTW 0 --diversityWeight 0.492125880210599 --growPopulationAfterNonImprovementIterations 9668 --penaltyBooster 1.01771036467219 --maxToleratedCapacityViolation 64 --preprocessTimeWindows 1 --growNbGranularAfterNonImprovementIterations 11304 --nbClose 19 --maxToleratedTimeWarp 149"
-EXTRA_ARGS="--targetFeasible 0.125630423362447 --minimumPopulationSize 17 --minSweepFillPercentage 57 --nbGranular 22"
+# EXTRA_ARGS="--targetFeasible 0.125630423362447 --minimumPopulationSize 17 --minSweepFillPercentage 57 --nbGranular 22"
+EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447 --minSweepFillPercentage 57 --minimumPopulationSize 17 --nbGranular 44"
 for SOLVER_SEED in 1 # 2 3 4 5
    do
    # perform baseline
-   # ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt" -n $nw -e $epochTime -s -d $SOLVER_SEED
-   ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
+   ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
+   # ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 done

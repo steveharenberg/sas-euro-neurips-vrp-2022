@@ -78,7 +78,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     if args is not None:
         vargs = vars(args)
         for hgs_arg in ALL_HGS_ARGS:
-            if vargs[hgs_arg] is not None:
+            if hgs_arg in vargs and vargs[hgs_arg] is not None:
                 argList += [f'-{hgs_arg}', str(vargs[hgs_arg])]
 
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:

@@ -4,3 +4,4 @@ cd baselines/hgs_vrptw
 make clean
 make all
 cd ../..
+bash build_vroom.sh

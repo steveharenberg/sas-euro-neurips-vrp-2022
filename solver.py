@@ -127,7 +127,6 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
             time_remaining = vroom_timelimit - (time.time() - start_time)
 
     fout.close()
-    print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}", file=sys.__stderr__)
     
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)
@@ -140,12 +139,19 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
     # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
     hgs_timelimit = int(max(time_limit - (time.time()-start_time), 1))
+    print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}. Remaining time: {hgs_timelimit}", file=sys.__stderr__)
     hgs_max_time = max(hgs_timelimit, 1)
-    argList = [ 'timeout', str(hgs_max_time),
-                executable, instance_filename, str(hgs_max_time), 
-                '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1',
-                '-warmstartFilePath', warmstart_filepath
-            ]
+    if len(costs) > 0:
+        argList = [ 'timeout', str(hgs_max_time),
+                    executable, instance_filename, str(hgs_max_time), 
+                    '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1',
+                    '-warmstartFilePath', warmstart_filepath
+                ]
+    else:
+        argList = [ 'timeout', str(hgs_max_time),
+                    executable, instance_filename, str(hgs_max_time), 
+                    '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
+                ]
     
     # Add all the tunable HGS args
     if args is not None:
@@ -177,7 +183,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 routes = []
             elif "EXCEPTION" in line:
                 raise Exception("HGS failed with exception: " + line)
-        assert len(routes) == 0, "HGS has terminated with imcomplete solution (is the line with Cost missing?)"
+        assert len(routes) == 0, "HGS has terminated with incomplete solution (is the line with Cost missing?)"
 
 
 def run_oracle(args, env):
@@ -227,6 +233,7 @@ def run_baseline(args, env, oracle_solution=None):
                 args.epoch_tlim = 8*60
         else:
             args.epoch_tlim = 1*60
+        epoch_tlim = args.epoch_tlim
     num_requests_postponed = 0
     while not done:
         epoch_instance = observation['epoch_instance']

@@ -13,10 +13,12 @@ epochTime=0
 # EXTRA_ARGS="--fractionGeneratedFurthest 0.0297427769063673 --maxToleratedCapacityViolation 56 --diversityWeight 0.0549103294641657"
 # EXTRA_ARGS="--skipSwapStarDist 1 --repairProbability 70 --fractionGeneratedNearest 0.145103803784702 --intensificationProbabilityLS 63 --targetFeasible 0.152474047152356 --generationSize 23 --growPopulationAfterIterations 18 --growNbGranularAfterIterations 16 --fractionGeneratedSweep 0.222938291216638 --useSwapStarTW 0 --diversityWeight 0.492125880210599 --growPopulationAfterNonImprovementIterations 9668 --penaltyBooster 1.01771036467219 --maxToleratedCapacityViolation 64 --preprocessTimeWindows 1 --growNbGranularAfterNonImprovementIterations 11304 --nbClose 19 --maxToleratedTimeWarp 149"
 # EXTRA_ARGS="--targetFeasible 0.125630423362447 --minimumPopulationSize 17 --minSweepFillPercentage 57 --nbGranular 22"
-EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447 --minSweepFillPercentage 57 --minimumPopulationSize 17 --nbGranular 44"
+# EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447 --minSweepFillPercentage 57 --minimumPopulationSize 17 --nbGranular 44"
+
+EXTRA_ARGS="--exploreLevel 4 --warmstartTimeFraction 0.3 --maxWarmstartTime 115"
 for SOLVER_SEED in 1 # 2 3 4 5
    do
    # perform baseline
-   ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
-   # ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
+   # ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
+   ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 done

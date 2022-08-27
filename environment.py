@@ -2,6 +2,7 @@ import time
 import numpy as np
 import tools
 import warnings
+import sys
 
 from typing import Dict, List, Tuple
 
@@ -83,6 +84,19 @@ class VRPEnvironment(Environment):
         self.EPOCH_DURATION = 3600  # We will dispatch vehicles once an hour
         self.TLIM_GRACE_PERIOD = 2  # 2 seconds wall clock grace time
 
+        # Use contest qualification phase time limits
+        if epoch_tlim == 0:
+            if is_static:
+                n_cust = len(instance['duration_matrix'])
+                if n_cust < 300:
+                    epoch_tlim = 3*60
+                elif n_cust < 500:
+                    epoch_tlim = 5*60
+                else:
+                    epoch_tlim = 8*60
+            else:
+                epoch_tlim = 1*60
+
         # Fill environment with defaults
         self.default_instance = instance
         self.default_seed = seed
@@ -152,7 +166,7 @@ class VRPEnvironment(Environment):
 
         # Check time limit
         if self.get_elapsed_time_epoch() > self.epoch_tlim + self.TLIM_GRACE_PERIOD:
-            return self._fail_episode("Time exceeded")
+            return self._fail_episode(f"Time exceeded {self.get_elapsed_time_epoch()} > {self.epoch_tlim + self.TLIM_GRACE_PERIOD}")
 
         # Check if solution is valid
         try:
@@ -189,6 +203,7 @@ class VRPEnvironment(Environment):
         self.final_solutions[self.current_epoch] = None
         self.final_costs[self.current_epoch] = max(self.end_epoch - self.current_epoch, 1) * _BIG_NUMBER
         self.is_done = True
+        print(f"\nFAILED WITH ERROR: {str(error)}", file=sys.__stderr__)
         return (None, -_BIG_NUMBER, self.is_done, {'error': str(error)})
 
     def _next_observation(self):

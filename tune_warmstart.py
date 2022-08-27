@@ -47,7 +47,7 @@ def run_instance(instance, args, solver_seed=1, instance_seed=1):
       print(f"Cost = {_BIG_NUMBER}")
       sys.stdout.flush()
       reward = -_BIG_NUMBER
-      # raise e
+      raise e
    finally:
       print("CLEANUP")
       if cleanup_tmp_dir:
@@ -116,7 +116,7 @@ if __name__ == "__main__":
     # Add stream handler of stdout to show the messages
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     storage_name = "postgresql://localhost:5432/template1"
-    study_name = "hgs_static_warmstart"
+    study_name = "hgs_static_warmstart_1"
     study = optuna.create_study(direction="minimize",
                                 pruner=PercentilePruner(
                                  25.0, n_min_trials=4, n_warmup_steps=5, interval_steps=5

@@ -51,6 +51,8 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     start_time = time.time()
     vroom_timelimit = int(min(time_limit * args.warmstartTimeFraction, args.maxWarmstartTime))
     best_cost = float("inf")
+    
+    rng=np.random.default_rng(args.solver_seed)
 
     # Prevent passing empty instances to the static solver, e.g. when
     # strategy decides to not dispatch any requests for the current epoch
@@ -113,7 +115,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
             for route in routes:
                 maxLink = None
                 maxCost = None
-                samples = np.random.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
+                samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
                 for i in samples:
                     linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
                     instancetmp['duration_matrix'][route[i], route[i+1]] = 999999

@@ -46,6 +46,8 @@ ALL_HGS_ARGS = [
     "preprocessTimeWindows",
 ]
 
+MIN_VROOM_TIME = 1
+
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
     time_limit = time_limit
     start_time = time.time()
@@ -54,6 +56,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     
     rng=np.random.default_rng(args.solver_seed)
 
+    costs = [] # stores all vroom solution costs
     # Prevent passing empty instances to the static solver, e.g. when
     # strategy decides to not dispatch any requests for the current epoch
     if instance['coords'].shape[0] <= 1:
@@ -70,63 +73,63 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
 
     instance_filename_json = os.path.join(tmp_dir, "problem.json")
 
-    # Call VROOM solver
-    warmstart_filepath = os.path.join(tmp_dir, "warmstart")
-    executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
-    # executable = tools.which('vroom')
-    
-    assert executable is not None, f"VROOM executable {executable} does not exist!"
-    costs = [] # stores all vroom solution costs
-    fout = open(warmstart_filepath, "w")    # this file stores are vroom solutions to get fed into HGS
-    instancetmp = copy.deepcopy(instance)   # this is an instance whose duration matrix gets updated so vroom produces new results
-    time_remaining = vroom_timelimit - (time.time() - start_time)
-    while time_remaining > 0:
-        tools.write_json(instance_filename_json, instancetmp)        
-        with subprocess.Popen([
-                    executable, '-i', instance_filename_json,
-                    '-l', str(time_remaining),
-                    '-x', str(args.exploreLevel),
-                    '-t', '1' # single threaded
-                ], stdout=subprocess.PIPE, text=True) as p:
-            routes = []
-            try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
-                for line in p.stdout:
-                    line = line.strip()
-                    vroom_output = json.loads(line)
-                    cost = int(vroom_output["summary"]["cost"])
-                    costs.append(cost)
-                    for route in vroom_output["routes"]:
-                        routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
-                    if cost < best_cost:
-                        best_cost = cost
-                        yield routes, cost
-            except:
-                break
-            
-            # String to output to warmstart file
-            routeStr = ",".join(str(v) for v in routes[0])
-            for route in routes[1:]:
-                routeStr += "~"
-                routeStr += ",".join(str(v) for v in route)
-            fout.write(routeStr + "\n")
-            
-            # Make a link from each route invalid so we get different routes on subsequent calls
-            # We could do less or more here, parameterize this?
-            for route in routes:
-                maxLink = None
-                maxCost = None
-                samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
-                for i in samples:
-                    linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
-                    instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
-                #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
-                #         maxLink = (route[i], route[i+1])
-                #         maxCost = linkCost
-                # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
-            
-            time_remaining = vroom_timelimit - (time.time() - start_time)
+    if vroom_timelimit > MIN_VROOM_TIME:
+        # Call VROOM solver
+        warmstart_filepath = os.path.join(tmp_dir, "warmstart")
+        executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
+        # executable = tools.which('vroom')
+        
+        assert executable is not None, f"VROOM executable {executable} does not exist!"
+        fout = open(warmstart_filepath, "w")    # this file stores are vroom solutions to get fed into HGS
+        instancetmp = copy.deepcopy(instance)   # this is an instance whose duration matrix gets updated so vroom produces new results
+        time_remaining = vroom_timelimit - (time.time() - start_time)
+        while time_remaining > 0:
+            tools.write_json(instance_filename_json, instancetmp)        
+            with subprocess.Popen([
+                        executable, '-i', instance_filename_json,
+                        '-l', str(time_remaining),
+                        '-x', str(args.exploreLevel),
+                        '-t', '1' # single threaded
+                    ], stdout=subprocess.PIPE, text=True) as p:
+                routes = []
+                try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
+                    for line in p.stdout:
+                        line = line.strip()
+                        vroom_output = json.loads(line)
+                        cost = int(vroom_output["summary"]["cost"])
+                        costs.append(cost)
+                        for route in vroom_output["routes"]:
+                            routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
+                        if cost < best_cost:
+                            best_cost = cost
+                            yield routes, cost
+                except:
+                    break
+                
+                # String to output to warmstart file
+                routeStr = ",".join(str(v) for v in routes[0])
+                for route in routes[1:]:
+                    routeStr += "~"
+                    routeStr += ",".join(str(v) for v in route)
+                fout.write(routeStr + "\n")
+                
+                # Make a link from each route invalid so we get different routes on subsequent calls
+                # We could do less or more here, parameterize this?
+                for route in routes:
+                    maxLink = None
+                    maxCost = None
+                    samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
+                    for i in samples:
+                        linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
+                        instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
+                    #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
+                    #         maxLink = (route[i], route[i+1])
+                    #         maxCost = linkCost
+                    # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
+                
+                time_remaining = vroom_timelimit - (time.time() - start_time)
 
-    fout.close()
+        fout.close()
     
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)
@@ -138,11 +141,12 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
 
     # Call HGS solver with unlimited number of vehicles allowed and parse outputs
     # Subtract two seconds from the time limit to account for writing of the instance and delay in enforcing the time limit by HGS
-    hgs_timelimit = int(max(time_limit - (time.time()-start_time), 1))
-    print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}. Remaining time: {hgs_timelimit}", file=sys.__stderr__)
-    hgs_max_time = max(hgs_timelimit, 1)
+    hgs_timelimit = max(time_limit - (time.time()-start_time), 1)
+    if args.verbose:
+        print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}. Remaining time: {hgs_timelimit}", file=sys.__stderr__)
+    hgs_max_time = int(hgs_timelimit+1)
     if len(costs) > 0:
-        argList = [ 'timeout', str(hgs_max_time),
+        argList = [ 'timeout', str(hgs_timelimit),
                     executable, instance_filename, str(hgs_max_time), 
                     '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1',
                     '-warmstartFilePath', warmstart_filepath
@@ -160,6 +164,8 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
             if hgs_arg in vargs and vargs[hgs_arg] is not None:
                 argList += [f'-{hgs_arg}', str(vargs[hgs_arg])]
 
+    time_cost = [] # stores all hgs solution costs and the time at which they were found
+    hgs_start = time.time()
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
@@ -179,12 +185,18 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                     assert cost == check_cost, "Cost of HGS VRPTW solution could not be validated"
                     yield solution, cost
                     best_cost = cost
+                    time_cost.append((time.time()-hgs_start, cost))
                 # Start next solution
                 routes = []
             elif "EXCEPTION" in line:
                 raise Exception("HGS failed with exception: " + line)
         assert len(routes) == 0, "HGS has terminated with incomplete solution (is the line with Cost missing?)"
-
+    if args.verbose:
+        log(f"hgs found {len(time_cost)} solutions in {time.time() - hgs_start} seconds.")
+    log("time\tcost")
+    for row in time_cost:
+        log(f"{row[0]}\t{row[1]}")
+        
 
 def run_oracle(args, env):
     # Oracle strategy which looks ahead, this is NOT a feasible strategy but gives a 'bound' on the performance

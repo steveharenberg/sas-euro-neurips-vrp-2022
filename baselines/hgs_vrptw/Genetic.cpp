@@ -343,9 +343,9 @@ Individual* Genetic::crossoverSREX(std::pair<const Individual*, const Individual
 void Genetic::insertUnplannedTasks(Individual* offspring, std::unordered_set<int> unplannedTasks)
 {
 	// Initialize some variables
-	int newDistanceToInsert = INT_MAX;		// TODO:
-	int newDistanceFromInsert = INT_MAX;	// TODO:
-	int distanceDelta = INT_MAX;			// TODO:
+	int newDistanceToInsert = INT_MAX/2;		// Fixed possible overflow
+	int newDistanceFromInsert = INT_MAX;	
+	int distanceDelta = INT_MAX;			
 
 	// Loop over all unplannedTasks
 	for (int c : unplannedTasks)

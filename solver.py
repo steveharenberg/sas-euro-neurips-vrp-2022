@@ -41,6 +41,7 @@ ALL_HGS_ARGS = [
     "circleSectorOverlapToleranceDegrees",
     "minCircleSectorSizeDegrees",
     "preprocessTimeWindows",
+    "useDynamicParameters"
 ]
 
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
@@ -252,6 +253,7 @@ if __name__ == "__main__":
     parser.add_argument("--circleSectorOverlapToleranceDegrees", type=int)
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
+    parser.add_argument("--useDynamicParameters", type=int)
 
     args, unknown = parser.parse_known_args()
 

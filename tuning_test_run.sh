@@ -15,10 +15,17 @@ epochTime=0
 # EXTRA_ARGS="--targetFeasible 0.125630423362447 --minimumPopulationSize 17 --minSweepFillPercentage 57 --nbGranular 22"
 # EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447 --minSweepFillPercentage 57 --minimumPopulationSize 17 --nbGranular 44"
 
-EXTRA_ARGS="--exploreLevel 4 --warmstartTimeFraction 0.3 --maxWarmstartTime 115"
+# EXTRA_ARGS="--exploreLevel 4 --warmstartTimeFraction 0.3 --maxWarmstartTime 115"
+# EXTRA_ARGS="--warmstartTimeFraction 0.532637273405508 --exploreLevel 2 --maxWarmstartTime 9.22387906957775"
+# EXTRA_ARGS="--warmstartTimeFraction 0.168890174134766 --exploreLevel 2 --maxWarmstartTime 12.2932546157762"
+# EXTRA_ARGS="-t tuning_warmstart_vroom --warmstartTimeFraction 0.168890174134766 --exploreLevel 2 --maxWarmstartTime 12.2932546157762"
+# EXTRA_ARGS="-t tuning_warmstart_hgs --nbHgsWarmstarts 8 --hgsWarmstartTime 3 --minimumPopulationSize 10"
+EXTRA_ARGS="-t tuning_combined --useDynamicParameters 1"
+
 for SOLVER_SEED in 1 # 2 3 4 5
    do
    # perform baseline
    # ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
-   ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
+   # ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
+   ./benchmark_run.sh -i $instanceList  -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 done

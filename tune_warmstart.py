@@ -20,7 +20,7 @@ MAX_FREE_PARAMS = 3 # can vary this many parameters at a time
 SEEDS = [1,2,3]
 INSTANCE_LIST_FILENAME_25 = 'instances_25.txt'
 INSTANCE_LIST_FILENAME_249 = 'instances_249.txt'
-default_params = {'exploreLevel': 0, 'warmstartTimeFraction': 0.2, 'maxWarmstartTime': 480}
+default_params = {'exploreLevel': 2, 'warmstartTimeFraction': 0.2, 'maxWarmstartTime': 60, 'minimumPopulationSize': 10, 'hgsWarmstartTime':0, 'nbHgsWarmstarts': 0}
 
 
 class AttrDict(dict):
@@ -59,12 +59,16 @@ def objective(trial):
     args = AttrDict()
     args["solver_seed"] = 1234
     args["verbose"] = False
-    args["epoch_tlim"] = 0
+    args["epoch_tlim"] = 60
     args["strategy"] = "greedy"
     
+    args["nbHgsWarmstarts"] = trial.suggest_int("nbHgsWarmstarts", 0, 12)
+    args["hgsWarmstartTime"] = trial.suggest_float("hgsWarmstartTime", 0.5, 5.0)
+    args["hgsWarmstartMode"] = "BEST"
     args["exploreLevel"] = trial.suggest_int("exploreLevel", 0, 5)
-    args["warmstartTimeFraction"] = trial.suggest_float("warmstartTimeFraction", 0.0, 0.8)
-    args["maxWarmstartTime"] = trial.suggest_float("maxWarmstartTime", 3, 480, log=True)
+    args["warmstartTimeFraction"] = trial.suggest_float("warmstartTimeFraction", 0.0, 0.30)
+    args["maxWarmstartTime"] = trial.suggest_float("maxWarmstartTime", 0, 60)
+    args["minimumPopulationSize"] = trial.suggest_float("minimumPopulationSize", 3, 25)
     print(args)
     avg_reward = 0
     with open(INSTANCE_LIST_FILENAME_25, 'r') as f:
@@ -116,7 +120,7 @@ if __name__ == "__main__":
     # Add stream handler of stdout to show the messages
     optuna.logging.get_logger("optuna").addHandler(logging.StreamHandler(sys.stdout))
     storage_name = "postgresql://localhost:5432/template1"
-    study_name = "hgs_static_warmstart_1"
+    study_name = "hgs_static_warmstart_2"
     study = optuna.create_study(direction="minimize",
                                 pruner=PercentilePruner(
                                  25.0, n_min_trials=4, n_warmup_steps=5, interval_steps=5

@@ -233,6 +233,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         hgs_warmstart_costs = []
         for result in hgs_warmstart_results:
             cost = result['cost']
+            hgs_warmstart_costs.append(cost)
             if hgs_warmstart_mode=="BEST" and cost !=  hgs_warmstart_best_cost:
                 continue
             elif hgs_warmstart_mode=="BEST_WORST" and cost !=  hgs_warmstart_best_cost and cost !=  hgs_warmstart_worst_cost:
@@ -245,11 +246,10 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 routeStr += ",".join(str(v) for v in route)
             fout.write(routeStr + "\n")
             found_routes.append(len(routes))
-            hgs_warmstart_costs.append(cost)
             
         if args.verbose:    
             time_left = time_limit - (time.time()-start_time)
-            print(f"\nhgs warmstart found {found_routes} solutions in {round(time.time()-hgs_warmstart_start,1)} seconds. The best costs are {hgs_warmstart_costs}. Remaining time: {time_left}", file=sys.__stderr__)
+            print(f"\nhgs warmstart found {len(hgs_warmstart_results)} solutions in {round(time.time()-hgs_warmstart_start,1)} seconds. The costs are {hgs_warmstart_costs}. Remaining time: {time_left}", file=sys.__stderr__)
     
     if fout is not None:
         fout.close()

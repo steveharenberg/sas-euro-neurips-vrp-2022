@@ -403,8 +403,7 @@ def populate_jobs(instance, jobs):
             }
         )
 
-
-def populate_vrptw(instance, name="problem"):
+def populate_vrptw(instance, name="problem", steps=None):
     meta = {}
     coords = instance['coords']
     jobs = []
@@ -445,7 +444,11 @@ def populate_vrptw(instance, name="problem"):
 
     vehicles = []
 
+    assert(steps is None or len(steps) <= n_vehicles)
     for n in range(n_vehicles):
+        route = []
+        if steps is not None and n < len(steps):
+            route = [{"type":"job", "id":i} for i in steps[n]]     
         vehicles.append(
             {
                 "id": int(n),
@@ -455,6 +458,7 @@ def populate_vrptw(instance, name="problem"):
                 "end_index": 0,
                 "capacity": [capacity],
                 "time_window": [int(time_min), int(time_max)],
+                "steps": route,
             }
         )
 
@@ -465,7 +469,7 @@ def populate_vrptw(instance, name="problem"):
         "matrices": {"car": {"durations": duration_matrix.tolist()}},
     }
 
-def write_json(filename, instance, name="problem", euclidean=False):
+def write_json(filename, instance, name="problem", steps=None):
     demands = instance['demands']
     is_depot = instance['is_depot']
     duration_matrix = instance['duration_matrix']
@@ -473,4 +477,4 @@ def write_json(filename, instance, name="problem", euclidean=False):
     assert (demands[~is_depot] > 0).all()
 
     with open(filename, 'w') as f:
-        json.dump(populate_vrptw(instance, name=name), f)
+        json.dump(populate_vrptw(instance, name=name, steps=steps), f)

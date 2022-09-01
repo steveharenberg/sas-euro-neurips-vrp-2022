@@ -50,6 +50,43 @@ ALL_HGS_ARGS = [
 MIN_VROOM_TIME = 1
 MIN_HGS_TIME = 0.5
 
+def routesToStr(routes):
+    if len(routes) == 0:
+        return ""
+
+    routesStr = ",".join(str(v) for v in routes[0])
+    for route in routes[1:]:
+        routesStr += "~"
+        routesStr += ",".join(str(v) for v in route)
+    
+    return routesStr
+
+
+def run_vroom(instance, tmp_dir, time_limit, explore_level, init_routes=[]):
+    executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
+    cost = None
+    routes = []
+
+    instance_filename_json = os.path.join(tmp_dir, "problem.json")
+    tools.write_json(instance_filename_json, instance, steps=init_routes)
+    with subprocess.Popen([
+                executable, '-i', instance_filename_json,
+                '-l', str(time_limit),
+                '-x', str(explore_level),
+                '-t', '1' # single threaded
+            ], stdout=subprocess.PIPE, text=True) as p:
+        try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
+            for line in p.stdout:
+                line = line.strip()
+                vroom_output = json.loads(line)
+                cost = int(vroom_output["summary"]["cost"])
+                for route in vroom_output["routes"]:
+                    routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
+        except:
+            pass
+    
+    return cost, routes
+
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
     time_limit = time_limit
     start_time = time.time()
@@ -81,8 +118,6 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
 
     os.makedirs(tmp_dir, exist_ok=True)
 
-    instance_filename_json = os.path.join(tmp_dir, "problem.json")
-    
     warmstart_filepath = os.path.join(tmp_dir, "warmstart")
     fout = None
 
@@ -96,51 +131,33 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         instancetmp = copy.deepcopy(instance)   # this is an instance whose duration matrix gets updated so vroom produces new results
         time_remaining = vroom_timelimit - (time.time() - start_time)
         while time_remaining > MIN_VROOM_TIME:
-            tools.write_json(instance_filename_json, instancetmp)        
-            with subprocess.Popen([
-                        executable, '-i', instance_filename_json,
-                        '-l', str(time_remaining),
-                        '-x', str(args.exploreLevel),
-                        '-t', '1' # single threaded
-                    ], stdout=subprocess.PIPE, text=True) as p:
-                routes = []
-                try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
-                    for line in p.stdout:
-                        line = line.strip()
-                        vroom_output = json.loads(line)
-                        cost = int(vroom_output["summary"]["cost"])
-                        costs.append(cost)
-                        for route in vroom_output["routes"]:
-                            routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
-                        if cost < best_cost:
-                            best_cost = cost
-                            yield routes, cost
-                            time_cost.append((time.time()-start_time, cost))
-                except:
-                    break
+            cost, routes = run_vroom(instancetmp, tmp_dir, time_remaining, args.exploreLevel, init_routes=steps)
+            if cost is None:
+                break
+            costs.append(cost)
+            if cost < best_cost:
+                best_cost = cost
+                yield routes, cost
+                time_cost.append((time.time()-start_time, cost))
                 
-                # String to output to warmstart file
-                routeStr = ",".join(str(v) for v in routes[0])
-                for route in routes[1:]:
-                    routeStr += "~"
-                    routeStr += ",".join(str(v) for v in route)
-                fout.write(routeStr + "\n")
-                
-                # Make a link from each route invalid so we get different routes on subsequent calls
-                # We could do less or more here, parameterize this?
-                for route in routes:
-                    maxLink = None
-                    maxCost = None
-                    samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
-                    for i in samples:
-                        linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
-                        instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
-                    #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
-                    #         maxLink = (route[i], route[i+1])
-                    #         maxCost = linkCost
-                    # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
-                
-                time_remaining = vroom_timelimit - (time.time() - start_time)
+            # String to output to warmstart file
+            fout.write(routesToStr(routes) + "\n")
+            
+            # Make a link from each route invalid so we get different routes on subsequent calls
+            # We could do less or more here, parameterize this?
+            for route in routes:
+                maxLink = None
+                maxCost = None
+                samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
+                for i in samples:
+                    linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
+                    instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
+                #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
+                #         maxLink = (route[i], route[i+1])
+                #         maxCost = linkCost
+                # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
+            
+            time_remaining = vroom_timelimit - (time.time() - start_time)
 
     
         if args.verbose:    

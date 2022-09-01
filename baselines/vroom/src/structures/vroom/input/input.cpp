@@ -900,7 +900,8 @@ std::unique_ptr<VRP> Input::get_problem() const {
 Solution Input::solve(unsigned exploration_level,
                       unsigned nb_thread,
                       const Timeout& timeout,
-                      const std::vector<HeuristicParameters>& h_param) {
+                      const std::vector<HeuristicParameters>& h_param,
+                      bool print_multiple_sols) {
   if (_geometry and !_all_locations_have_coords) {
     // Early abort when info is required with missing coordinates.
     throw InputException("Route geometry request with missing coordinates.");
@@ -944,7 +945,8 @@ Solution Input::solve(unsigned exploration_level,
   auto sol = instance->solve(exploration_level,
                              nb_thread,
                              solve_time,
-                             (_has_initial_routes) ? h_init_routes : h_param);
+                             (_has_initial_routes) ? h_init_routes : h_param,
+                             print_multiple_sols);
 
   // Update timing info.
   sol.summary.computing_times.loading = loading;

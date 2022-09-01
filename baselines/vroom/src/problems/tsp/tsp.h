@@ -48,7 +48,8 @@ public:
   solve(unsigned,
         unsigned nb_threads,
         const Timeout& timeout,
-        const std::vector<HeuristicParameters>&) const override;
+        const std::vector<HeuristicParameters>& h_param,
+        bool) const override;
 };
 
 } // namespace vroom

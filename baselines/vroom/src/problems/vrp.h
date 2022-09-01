@@ -30,7 +30,8 @@ public:
   solve(unsigned exploration_level,
         unsigned nb_threads,
         const Timeout& timeout,
-        const std::vector<HeuristicParameters>& h_param) const = 0;
+        const std::vector<HeuristicParameters>& h_param,
+        bool print_multiple_sols = false) const = 0;
 };
 
 } // namespace vroom

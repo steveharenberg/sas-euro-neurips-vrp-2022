@@ -26,6 +26,7 @@ All rights reserved (see LICENSE).
 #include "problems/vrptw/operators/two_opt.h"
 #include "problems/vrptw/operators/unassigned_exchange.h"
 #include "utils/helpers.h"
+#include "utils/output_json.h"
 
 namespace vroom {
 namespace ls {
@@ -66,7 +67,8 @@ LocalSearch<Route,
             RouteExchange>::LocalSearch(const Input& input,
                                         std::vector<Route>& sol,
                                         unsigned max_nb_jobs_removal,
-                                        const Timeout& timeout)
+                                        const Timeout& timeout,
+                                        bool print_multiple_sols)
   : _input(input),
     _nb_vehicles(_input.vehicles.size()),
     _max_nb_jobs_removal(max_nb_jobs_removal),
@@ -76,7 +78,8 @@ LocalSearch<Route,
     _all_routes(_nb_vehicles),
     _sol_state(input),
     _sol(sol),
-    _best_sol(sol) {
+    _best_sol(sol),
+    _print_multiple_sols(print_multiple_sols) {
   // Initialize all route indices.
   std::iota(_all_routes.begin(), _all_routes.end(), 0);
 
@@ -1819,6 +1822,9 @@ void LocalSearch<Route,
       });
 
     if (current_sol_indicators < _best_sol_indicators) {
+      if (_print_multiple_sols)
+        vroom::io::write_to_json(utils::format_solution(_input, _sol), false, "");
+
       _best_sol_indicators = current_sol_indicators;
       _best_sol = _sol;
     } else {

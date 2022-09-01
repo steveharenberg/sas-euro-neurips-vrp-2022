@@ -136,7 +136,8 @@ public:
                  unsigned nb_thread,
                  const Timeout& timeout = Timeout(),
                  const std::vector<HeuristicParameters>& h_param =
-                   std::vector<HeuristicParameters>());
+                   std::vector<HeuristicParameters>(),
+                 bool print_multiple_sols = false);
 
   Solution check(unsigned nb_thread);
 };

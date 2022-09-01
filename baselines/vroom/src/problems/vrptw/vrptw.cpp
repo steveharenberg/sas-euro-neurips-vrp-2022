@@ -144,7 +144,8 @@ VRPTW::VRPTW(const Input& input) : VRP(input) {
 Solution VRPTW::solve(unsigned exploration_level,
                       unsigned nb_threads,
                       const Timeout& timeout,
-                      const std::vector<HeuristicParameters>& h_param) const {
+                      const std::vector<HeuristicParameters>& h_param,
+                      bool print_multiple_sols) const {
   // Use vector of parameters when passed for debugging, else use
   // predefined parameter set.
   const auto& parameters = (!h_param.empty())
@@ -214,7 +215,8 @@ Solution VRPTW::solve(unsigned exploration_level,
         vrptw::LocalSearch ls(_input,
                               tw_solutions[rank],
                               max_nb_jobs_removal,
-                              search_time);
+                              search_time,
+                              print_multiple_sols);
         ls.run();
 
         // Store solution indicators.

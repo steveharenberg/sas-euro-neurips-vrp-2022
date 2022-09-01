@@ -34,6 +34,7 @@ struct CLArgs {
   std::string input;                         // cl arg
   unsigned nb_threads;                       // -t
   unsigned exploration_level;                // -x
+  bool print_multiple_sols;                  // -s
 
   static const unsigned max_exploration_level;
 };

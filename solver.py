@@ -6,6 +6,7 @@ import os
 import uuid
 import platform
 import numpy as np
+import time
 
 import tools
 from environment import VRPEnvironment, ControllerEnvironment
@@ -41,21 +42,24 @@ ALL_HGS_ARGS = [
     "circleSectorOverlapToleranceDegrees",
     "minCircleSectorSizeDegrees",
     "preprocessTimeWindows",
-    "useDynamicParameters"
+    "useDynamicParameters",
 ]
 
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
-
+    start_time = time.time()
+    time_cost = [] # stores all solution costs and the time at which they were found
     # Prevent passing empty instances to the static solver, e.g. when
     # strategy decides to not dispatch any requests for the current epoch
     if instance['coords'].shape[0] <= 1:
         yield [], 0
+        time_cost.append((time.time()-start_time, 0))
         return
 
     if instance['coords'].shape[0] <= 2:
         solution = [[1]]
         cost = tools.validate_static_solution(instance, solution)
         yield solution, cost
+        time_cost.append((time.time()-start_time, cost))
         return
 
     os.makedirs(tmp_dir, exist_ok=True)
@@ -99,12 +103,16 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 check_cost = tools.validate_static_solution(instance, solution)
                 assert cost == check_cost, "Cost of HGS VRPTW solution could not be validated"
                 yield solution, cost
+                time_cost.append((time.time()-start_time, cost))
                 # Start next solution
                 routes = []
             elif "EXCEPTION" in line:
                 raise Exception("HGS failed with exception: " + line)
         assert len(routes) == 0, "HGS has terminated with imcomplete solution (is the line with Cost missing?)"
-
+    if 'logTimeCost' in args and args.logTimeCost:
+        log("time\tcost")
+        for row in time_cost:
+            log(f"{row[0]:0.3f}\t{row[1]}")
 
 def run_oracle(args, env):
     # Oracle strategy which looks ahead, this is NOT a feasible strategy but gives a 'bound' on the performance
@@ -254,6 +262,8 @@ if __name__ == "__main__":
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
     parser.add_argument("--useDynamicParameters", type=int)
+    
+    parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
 
     args, unknown = parser.parse_known_args()
 

@@ -7,8 +7,8 @@ INLINES:=
 INLINES:=$(INLINES) -finline-functions
 INLINES:=$(INLINES) -finline-limit=100000
 # INLINES:=
-# CCFLAGS = -Wall -O2 -g -std=c++2a $(INLINES)
-CCFLAGS = -Wall -O3 -g -std=c++2a $(INLINES)
+CCFLAGS = -Wall -O2 -std=c++2a $(INLINES)
+# CCFLAGS = -Wall -O3 -std=c++2a $(INLINES)
 # CCFLAGS = -Wall -O3 -std=c++2a
 # CCFLAGS = -Wall -std=c++2a -g
 # CCFLAGS = -Wall -std=c++2a -g

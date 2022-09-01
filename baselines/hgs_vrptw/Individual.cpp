@@ -115,15 +115,7 @@ void Individual::shuffleChromT()
 
 void Individual::removeProximity(Individual* indiv)
 {
-	// Get the first individual in indivsPerProximity
-	auto it = indivsPerProximity.begin();
-	// Loop over all individuals in indivsPerProximity until indiv is found
-	while (it->second != indiv)
-	{
-		++it;
-	}
-	// Remove indiv from indivsPerProximity
-	indivsPerProximity.erase(it);
+	proximities.erase(proximityPerIndividual[indiv]);
 }
 
 double Individual::brokenPairsDistance(Individual* indiv2)
@@ -149,11 +141,11 @@ double Individual::brokenPairsDistance(Individual* indiv2)
 double Individual::averageBrokenPairsDistanceClosest(int nbClosest)
 {
 	double result = 0;
-	int maxSize = std::min(nbClosest, static_cast<int>(indivsPerProximity.size()));
-	auto it = indivsPerProximity.begin();
+	int maxSize = std::min(nbClosest, static_cast<int>(proximities.size()));
+	auto it = proximities.begin();
 	for (int i = 0; i < maxSize; i++)
 	{
-		result += it->first;
+		result += *it;
 		++it;
 	}
 	return result / maxSize;

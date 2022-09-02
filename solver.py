@@ -63,29 +63,30 @@ def routesToStr(routes):
 
 
 def run_vroom(instance, tmp_dir, time_limit, explore_level, init_routes=[]):
+    solutions = []
     executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
-    cost = None
-    routes = []
-
     instance_filename_json = os.path.join(tmp_dir, "problem.json")
     tools.write_json(instance_filename_json, instance, steps=init_routes)
     with subprocess.Popen([
                 executable, '-i', instance_filename_json,
                 '-l', str(time_limit),
                 '-x', str(explore_level),
-                '-t', '1' # single threaded
+                '-t', '1', # single threaded
+                '-s'
             ], stdout=subprocess.PIPE, text=True) as p:
         try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
             for line in p.stdout:
                 line = line.strip()
                 vroom_output = json.loads(line)
                 cost = int(vroom_output["summary"]["cost"])
+                routes = []
                 for route in vroom_output["routes"]:
                     routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
+                solutions.append((cost, routes))
         except:
             pass
     
-    return cost, routes
+    return solutions
 
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
     time_limit = time_limit
@@ -125,46 +126,32 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         # Call VROOM solver
         executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
         # executable = tools.which('vroom')
-        
         assert executable is not None, f"VROOM executable {executable} does not exist!"
+
+        init_routes = []
+        init_routes = [[185, 24, 98, 33, 246, 74, 1, 170, 115, 55, 31, 2], [17, 65, 100, 109, 108, 113, 125, 140, 141, 253, 120, 232, 23, 142, 15, 111, 243, 61, 167], [47, 164, 93, 139, 11, 18, 228, 7, 257, 188, 9, 245, 119, 39, 37, 48, 49, 225, 78, 179, 151, 171], [85, 200, 191, 5, 58, 254, 176, 114, 56, 138, 13, 124, 103, 241, 3, 51, 133, 106, 30], [233, 81, 117, 46, 42, 43, 16, 136, 45, 189, 247, 69, 172, 70, 194, 54, 20, 90, 53, 122, 237, 229], [236, 207, 248, 59, 231, 175, 131, 79, 215, 38, 216, 68, 4, 77, 252, 166, 112, 239, 26, 118, 64], [177, 226, 214, 187, 123, 222, 84, 75, 255, 110, 62, 96, 19, 258, 63, 71, 34, 87, 92], [10, 134, 73, 83, 22, 155, 163, 235, 127, 40, 234, 116, 44, 198, 238, 240, 143, 76, 91, 199, 14], [154, 72, 94, 82, 182, 165, 126, 132, 89, 173, 32, 251, 25, 244, 80, 203, 190, 227, 99, 144, 27, 52], [230, 156, 256, 129, 135, 57, 60, 8, 184, 197, 195, 178, 29, 28, 12, 105, 212, 242, 183, 97, 88, 169, 204, 218], [223, 213, 221, 211, 202, 210, 209, 208, 224, 157, 160, 217, 149, 150, 148, 181, 193, 86, 201, 102, 220, 219, 206, 205, 196, 180], [50, 35, 147, 152, 161, 158, 153, 130, 107, 249, 250, 101, 128, 121, 146, 145, 159, 162], [174, 67, 104, 66, 168, 6, 36, 186, 95, 137, 41, 21, 192]]
         fout = open(warmstart_filepath, "w")    # this file stores are vroom solutions to get fed into HGS
         instancetmp = copy.deepcopy(instance)   # this is an instance whose duration matrix gets updated so vroom produces new results
         time_remaining = vroom_timelimit - (time.time() - start_time)
-        while time_remaining > MIN_VROOM_TIME:
-            cost, routes = run_vroom(instancetmp, tmp_dir, time_remaining, args.exploreLevel, init_routes=steps)
-            if cost is None:
-                break
-            costs.append(cost)
+
+        solutions = run_vroom(instancetmp, tmp_dir, time_remaining, args.exploreLevel, init_routes=init_routes)
+        costs = [s[0] for s in solutions]
+        if len(solutions) > 0:
+            cost, routes = min(solutions)
             if cost < best_cost:
                 best_cost = cost
                 yield routes, cost
                 time_cost.append((time.time()-start_time, cost))
-                
-            # String to output to warmstart file
+            
+        # String to output to warmstart file
+        for cost, routes in solutions:
             fout.write(routesToStr(routes) + "\n")
             
-            # Make a link from each route invalid so we get different routes on subsequent calls
-            # We could do less or more here, parameterize this?
-            for route in routes:
-                maxLink = None
-                maxCost = None
-                samples = rng.choice(range(len(route)-1), size=(int(0.25*len(route))), replace=False)
-                for i in samples:
-                    linkCost = instancetmp['duration_matrix'][route[i], route[i+1]]
-                    instancetmp['duration_matrix'][route[i], route[i+1]] = 999999
-                #     if maxCost is None or instancetmp['duration_matrix'][route[i], route[i+1]] > maxCost:
-                #         maxLink = (route[i], route[i+1])
-                #         maxCost = linkCost
-                # instancetmp['duration_matrix'][maxLink[0], maxLink[1]] = 999999
-            
-            time_remaining = vroom_timelimit - (time.time() - start_time)
-
+        time_remaining = vroom_timelimit - (time.time() - start_time)
     
         if args.verbose:    
             time_left = time_limit - (time.time()-start_time)
             print(f"\nVROOM found {len(costs)} solutions in {round(time.time()-start_time,1)} seconds. The costs are {costs}. Remaining time: {time_left}", file=sys.__stderr__)
-    
-    
     
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)

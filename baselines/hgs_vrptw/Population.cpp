@@ -180,6 +180,8 @@ bool Population::addIndividual(const Individual* indiv, bool updateFeasible)
 		double myDistance = myIndividual->brokenPairsDistance(myIndividual2);
 		myIndividual2->proximities.insert(myDistance);
 		myIndividual->proximities.insert(myDistance);
+		myIndividual2->proximityPerIndividual.insert({ myIndividual, myDistance });
+		myIndividual->proximityPerIndividual.insert({ myIndividual2, myDistance });
 	}
 
 	// Identify the correct location in the population and insert the individual

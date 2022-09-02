@@ -17,6 +17,6 @@ EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447
 for SOLVER_SEED in 1 # 2 3 4 5
    do
    # perform baseline
-   ./benchmark_run.sh -i $instanceList -t "tuning_baseline_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
+   ./benchmark_run.sh -i $instanceList -t "tuning_improved_opt_2" -n $nw -e $epochTime -s -d $SOLVER_SEED
    # ./benchmark_run.sh -i $instanceList -t "tuning_combined" -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 done

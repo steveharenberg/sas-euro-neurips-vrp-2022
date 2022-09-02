@@ -228,7 +228,7 @@ bool Population::addIndividual(const Individual* indiv, bool updateFeasible)
 void Population::updateBiasedFitnesses(SubPopulation& pop)
 {
 	// Ranking the individuals based on their diversity contribution (decreasing order of averageBrokenPairsDistanceClosest)
-	std::vector<std::pair<double, int>> ranking;
+	ranking.clear();
 	for (int i = 0; i < static_cast<int>(pop.size()); i++)
 	{
 		ranking.push_back({ -pop[i]->averageBrokenPairsDistanceClosest(params->config.nbClose),i });
@@ -638,6 +638,7 @@ Population::Population(Params* params, Split* split, LocalSearch* localSearch, S
 
 	// Generate a new population
 	generatePopulation();
+	ranking = std::vector<std::pair<double, int>>(std::max(feasibleSubpopulation.size(),infeasibleSubpopulation.size()));
 }
 
 Population::~Population()

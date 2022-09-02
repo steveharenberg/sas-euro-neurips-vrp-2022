@@ -160,6 +160,7 @@ private:
 	int nbMoves;								// Total number of moves (RI and SWAP*) applied during the local search. Attention: this is not only a simple counter, it is also used to avoid repeating move evaluations
 	std::vector < int > orderNodes;				// Randomized order for checking the nodes in the RI local search
 	std::vector < int > orderRoutes;			// Randomized order for checking the routes in the SWAP* local search
+	std::vector<NodeToInsert> nodesToInsert; // shared storage for nodes to insert
 	std::set < int > emptyRoutes;				// indices of all empty routes
 	int loopID;									// Current loop index
 

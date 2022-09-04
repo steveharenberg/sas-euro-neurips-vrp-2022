@@ -163,7 +163,7 @@ void LocalSearch::constructIndividualBySweep(int fillPercentage, Individual* ind
 	// insertion sort
 	for (auto i = std::begin(nodesToInsert); i != std::end(nodesToInsert); ++i) {
 		std::rotate(std::upper_bound(std::begin(nodesToInsert), i, *i, 
-			[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; })
+			[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot <= b.angleFromDepot; })
 		, i, i+1);
 	}
 

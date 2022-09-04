@@ -233,7 +233,12 @@ void Population::updateBiasedFitnesses(SubPopulation& pop)
 	{
 		ranking.push_back({ -pop[i]->averageBrokenPairsDistanceClosest(params->config.nbClose),i });
 	}
-	std::sort(ranking.begin(), ranking.end());
+	// std::sort(ranking.begin(), ranking.end());
+	// insertion sort
+	for (auto i = ranking.begin(); i != ranking.end(); ++i) {
+		std::rotate(std::upper_bound(ranking.begin(), i, *i)
+		, i, i+1);
+	}
 
 	// Updating the biased fitness values. If there is only one individual, its biasedFitness is 0
 	if (pop.size() == 1)

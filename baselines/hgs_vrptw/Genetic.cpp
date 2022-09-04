@@ -343,10 +343,9 @@ Individual* Genetic::crossoverSREX(std::pair<const Individual*, const Individual
 void Genetic::insertUnplannedTasks(Individual* offspring, std::unordered_set<int> unplannedTasks)
 {
 	// Initialize some variables
-	const int BIG_INT = INT_MAX-1e8;
-	int newDistanceToInsert = BIG_INT;		// TODO:
-	int newDistanceFromInsert = BIG_INT;	// TODO:
-	int distanceDelta = BIG_INT;			// TODO:
+	int newDistanceToInsert;		// Initialized for each route
+	int newDistanceFromInsert;		// Initialized for each route
+	int distanceDelta;		      // Initialized for each route
 
 	// Loop over all unplannedTasks
 	for (int c : unplannedTasks)
@@ -355,7 +354,7 @@ void Genetic::insertUnplannedTasks(Individual* offspring, std::unordered_set<int
 		int earliestArrival = params->cli[c].earliestArrival;
 		int latestArrival = params->cli[c].latestArrival;
 
-		int bestDistance = BIG_INT;
+		int bestDistance = INT_MAX;
 		std::pair<int, int> bestLocation;
 
 		// Loop over all routes
@@ -367,6 +366,7 @@ void Genetic::insertUnplannedTasks(Individual* offspring, std::unordered_set<int
 				continue;
 			}
 
+			newDistanceToInsert = params->timeCost.get(c, offspring->chromR[r][0]);
 			newDistanceFromInsert = params->timeCost.get(c, offspring->chromR[r][0]);
 			if (earliestArrival + newDistanceFromInsert < params->cli[offspring->chromR[r][0]].latestArrival)
 			{

@@ -157,9 +157,15 @@ void LocalSearch::constructIndividualBySweep(int fillPercentage, Individual* ind
 	std::vector< std::vector< int > > nodeIndicesPerRoute;
 
 	// Sort nodes according to angle with depot.
-	std::sort(std::begin(nodesToInsert),
-		std::end(nodesToInsert),
-		[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; });
+	// std::sort(std::begin(nodesToInsert),
+	// 	std::end(nodesToInsert),
+	// 	[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; });
+	// insertion sort
+	for (auto i = std::begin(nodesToInsert); i != std::end(nodesToInsert); ++i) {
+		std::rotate(std::upper_bound(std::begin(nodesToInsert), i, *i, 
+			[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; })
+		, i, i+1);
+	}
 
 	// Distribute clients over routes.
 	int load = 0;

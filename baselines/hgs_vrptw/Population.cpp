@@ -178,8 +178,10 @@ bool Population::addIndividual(const Individual* indiv, bool updateFeasible)
 	for (Individual* myIndividual2 : subpop)
 	{
 		double myDistance = myIndividual->brokenPairsDistance(myIndividual2);
-		myIndividual2->indivsPerProximity.insert({ myDistance, myIndividual });
-		myIndividual->indivsPerProximity.insert({ myDistance, myIndividual2 });
+		myIndividual2->proximities.insert(myDistance);
+		myIndividual->proximities.insert(myDistance);
+		myIndividual2->proximityPerIndividual.insert({ myIndividual, myDistance });
+		myIndividual->proximityPerIndividual.insert({ myIndividual2, myDistance });
 	}
 
 	// Identify the correct location in the population and insert the individual
@@ -226,12 +228,17 @@ bool Population::addIndividual(const Individual* indiv, bool updateFeasible)
 void Population::updateBiasedFitnesses(SubPopulation& pop)
 {
 	// Ranking the individuals based on their diversity contribution (decreasing order of averageBrokenPairsDistanceClosest)
-	std::vector<std::pair<double, int>> ranking;
+	ranking.clear();
 	for (int i = 0; i < static_cast<int>(pop.size()); i++)
 	{
 		ranking.push_back({ -pop[i]->averageBrokenPairsDistanceClosest(params->config.nbClose),i });
 	}
-	std::sort(ranking.begin(), ranking.end());
+	// std::sort(ranking.begin(), ranking.end());
+	// insertion sort
+	for (auto i = ranking.begin(); i != ranking.end(); ++i) {
+		std::rotate(std::upper_bound(ranking.begin(), i, *i)
+		, i, i+1);
+	}
 
 	// Updating the biased fitness values. If there is only one individual, its biasedFitness is 0
 	if (pop.size() == 1)
@@ -636,6 +643,7 @@ Population::Population(Params* params, Split* split, LocalSearch* localSearch, S
 
 	// Generate a new population
 	generatePopulation();
+	ranking = std::vector<std::pair<double, int>>(std::max(feasibleSubpopulation.size(),infeasibleSubpopulation.size()));
 }
 
 Population::~Population()

@@ -53,6 +53,7 @@ private:
 	Individual bestSolutionRestart;							// Best solution found during the current restart of the algorthm
 	Individual bestSolutionOverall;							// Best solution found during the complete execution of the algorithm
 	Solutions const& warmstartSolutions;					// Solutions to warmstart the GA with
+	std::vector<std::pair<double, int>> ranking;       // reusable storage for ranking operations
 
 	// Evaluates the biased fitness of all individuals in the population
 	void updateBiasedFitnesses(SubPopulation& pop);

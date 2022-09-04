@@ -50,6 +50,7 @@ int main(int argc, char* argv[])
 				population.exportBKS(commandline.config.pathBKS);
 			}
 		}
+		params.timeCost.cleanup();
 	}
 
 	// Catch exceptions
@@ -62,6 +63,6 @@ int main(int argc, char* argv[])
 		// SKIPPING std::cout << "EXCEPTION | " << e.what() << std::endl; 
 	}
 
-	// Return 0 if the program execution was successfull
+	// Return 0 if the program execution was successful
 	return 0;
 }

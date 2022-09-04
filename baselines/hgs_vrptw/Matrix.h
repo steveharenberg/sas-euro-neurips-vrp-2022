@@ -34,18 +34,34 @@ public:
     }
 
     // Set a value val at position (row, col) in the matrix
-    INLINE void set(const int row, const int col, const int val)
+    INLINE
+    void set(const int row, const int col, const int val)
     {
         // data_[cols_ * row + col] = val;
         data_[row][col] = val;
     }
 
     // Get the value at position (row, col) in the matrix
-    INLINE int get(const int row, const int col) const
+    INLINE 
+    int get(const int row, const int col) const
     {
         // return data_[cols_ * row + col];
         return data_[row][col];
     }
+
+    // better to use the destructor, but it was hitting a sanitizer bug (when running with -fsanitize=address), so use a manual method for now
+    void cleanup()
+    {
+        delete[] data_;
+        delete[] data__;
+    }
+
+    // TODO: delete cleanup() and instead use the destructor
+    // ~Matrix()
+    // {
+    //     delete[] data_;
+    //     delete[] data__;
+    // }
 };
 
 // Implementation of a matrix in a C++ vector

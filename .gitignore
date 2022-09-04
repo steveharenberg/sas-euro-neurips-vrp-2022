@@ -1,6 +1,7 @@
 .vscode
 .flake8
 tmp
+tmp*
 hidden
 nohup.out
 test.py

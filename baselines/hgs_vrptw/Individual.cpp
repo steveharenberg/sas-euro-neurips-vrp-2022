@@ -148,7 +148,7 @@ double Individual::averageBrokenPairsDistanceClosest(int nbClosest)
 		result += *it;
 		++it;
 	}
-	return result / maxSize;
+	return maxSize==0 ? 0 : result / maxSize;
 }
 
 void Individual::exportCVRPLibFormat(std::string fileName)

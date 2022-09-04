@@ -16,7 +16,8 @@ epochTime=0
 # EXTRA_ARGS="--growNbGranularAfterIterations 6 --targetFeasible 0.125630423362447 --minSweepFillPercentage 57 --minimumPopulationSize 17 --nbGranular 44"
 # EXTRA_ARGS="-t tuning_manual1 --minimumPopulationSize 12 --generationSize 20 --nbElite 2"
 # EXTRA_ARGS="-t tuning_manual1 --minimumPopulationSize 12 --generationSize 20 --nbElite 4"
-EXTRA_ARGS="-t tuning_improved2_opt_2"
+# EXTRA_ARGS="-t tuning_improved2_opt_2"
+EXTRA_ARGS="-t tuning_manual1 --preprocessTimeWindows 1"
 for SOLVER_SEED in 1 # 2 3 4 5
    do
    # perform baseline

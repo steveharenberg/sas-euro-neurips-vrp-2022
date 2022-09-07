@@ -196,7 +196,8 @@ int main(int argc, char** argv) {
                                                      cl_args.print_multiple_sols);
 
     // Write solution.
-    vroom::io::write_to_json(sol, cl_args.geometry, cl_args.output_file);
+    if (!cl_args.print_multiple_sols) // otherwise solution is already written (albeit it is not necessarily the last one written)
+      vroom::io::write_to_json(sol, cl_args.geometry, cl_args.output_file);
   } catch (const vroom::Exception& e) {
     std::cerr << "[Error] " << e.message << std::endl;
     vroom::io::write_to_json({e.error_code, e.message},

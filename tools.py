@@ -39,6 +39,8 @@ def cleanup_tmp_dir(tmp_dir):
         filepath = os.path.join(tmp_dir, filename)
         if 'problem.vrptw' in filename and os.path.isfile(filepath):
             os.remove(filepath)
+        if 'problem_vroom.json' in filename and os.path.isfile(filepath):
+            os.remove(filepath)            
         if 'problem.json' in filename and os.path.isfile(filepath):
             os.remove(filepath)
         if 'warmstart' in filename and os.path.isfile(filepath):

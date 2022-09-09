@@ -36,9 +36,9 @@ if __name__ == "__main__":
     if args.epoch_tlim == 0:
         if args.static:
             n_cust = len(static_instance['duration_matrix'])
-            if n_cust < 300:
+            if n_cust <= 300:
                 args.epoch_tlim = 3*60
-            elif n_cust < 500:
+            elif n_cust <= 500:
                 args.epoch_tlim = 5*60
             else:
                 args.epoch_tlim = 8*60

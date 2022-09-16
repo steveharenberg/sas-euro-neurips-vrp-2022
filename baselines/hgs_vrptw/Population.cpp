@@ -465,14 +465,14 @@ std::pair<Individual*, Individual*> Population::getNonIdenticalParentsBinaryTour
 	// Pick two individual using a binary tournament
 	int chosen1, chosen2;
 	Individual* parentA = getBinaryTournament(2, -1, chosen1);
-	Individual* parentB = getBinaryTournament(2, chosen1, chosen2);
-	// int num_tries = 1;
-	// // Pick two other individuals as long as they are identical (try at most 9 times)
-	// while (parentA->brokenPairsDistance(parentB) < MY_EPSILON && num_tries < 10)
-	// {
-	// 	parentB = getBinaryTournament(3, chosen1, chosen2);
-	// 	num_tries++;
-	// }
+	Individual* parentB = getBinaryTournament(chosen1, chosen2);
+	int num_tries = 1;
+	// Pick two other individuals as long as they are identical (try at most 9 times)
+	while (parentA->brokenPairsDistance(parentB) < MY_EPSILON && num_tries < 10)
+	{
+		parentB = getBinaryTournament(chosen1, chosen2);
+		num_tries++;
+	}
 
 	// Return the two individuals as a pair
 	return std::make_pair(parentA, parentB);

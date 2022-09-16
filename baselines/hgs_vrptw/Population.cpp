@@ -382,17 +382,45 @@ void Population::managePenalties()
 	}
 }
 
-Individual* Population::getBinaryTournament()
+Individual* Population::getBinaryTournament(int rounds, int avoid, int &chosen)
+{
+	if(rounds<=1){
+		return getBinaryTournament(avoid, chosen);
+	}
+	int chosen1, chosen2;
+	Individual* individual1 = getBinaryTournament(rounds-1, avoid, chosen1);
+	Individual* individual2 = getBinaryTournament(rounds-1, avoid < 0 ? chosen1 : avoid, chosen2);
+
+	// Return the individual with the lowest biasedFitness value
+	if (individual1->biasedFitness < individual2->biasedFitness){
+		chosen = chosen1;
+		return individual1;
+	}
+	else{
+		chosen = chosen2;
+		return individual2;
+	}
+}
+
+void Population::updateBiasedFitnesses(){
+	// Update the fitness values of all the individuals (feasible and infeasible)
+	updateBiasedFitnesses(feasibleSubpopulation);
+	updateBiasedFitnesses(infeasibleSubpopulation);
+}
+
+Individual* Population::getBinaryTournament(int avoid, int &chosen)
 {
 	Individual* individual1;
 	Individual* individual2;
 
-	// Update the fitness values of all the individuals (feasible and infeasible)
-	updateBiasedFitnesses(feasibleSubpopulation);
-	updateBiasedFitnesses(infeasibleSubpopulation);
-
 	// Pick a first random number individual from the total population (of both feasible and infeasible individuals)
-	int place1 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
+	int place1;
+	if(avoid<0)
+		place1 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
+	else{
+		place1 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1);
+		if(place1>= avoid) place1++;
+	}
 	if (place1 >= static_cast<int>(feasibleSubpopulation.size()))
 	{
 		individual1 = infeasibleSubpopulation[place1 - feasibleSubpopulation.size()];
@@ -403,7 +431,13 @@ Individual* Population::getBinaryTournament()
 	}
 
 	// Pick a second random number individual from the total population (of both feasible and infeasible individuals)
-	int place2 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
+	int place2;
+	if(avoid<0)
+		place2 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
+	else{
+		place2 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1);
+		if(place2>= avoid) place2++;
+	}
 	if (place2 >= static_cast<int>(feasibleSubpopulation.size()))
 	{
 		individual2 = infeasibleSubpopulation[place2 - feasibleSubpopulation.size()];
@@ -416,10 +450,12 @@ Individual* Population::getBinaryTournament()
 	// Return the individual with the lowest biasedFitness value
 	if (individual1->biasedFitness < individual2->biasedFitness)
 	{
+		chosen = place1;
 		return individual1;
 	}
 	else
 	{
+		chosen = place2;
 		return individual2;
 	}
 }
@@ -427,15 +463,16 @@ Individual* Population::getBinaryTournament()
 std::pair<Individual*, Individual*> Population::getNonIdenticalParentsBinaryTournament()
 {
 	// Pick two individual using a binary tournament
-	Individual* parentA = getBinaryTournament();
-	Individual* parentB = getBinaryTournament();
-	int num_tries = 1;
-	// Pick two other individuals as long as they are identical (try at most 9 times)
-	while (parentA->brokenPairsDistance(parentB) < MY_EPSILON && num_tries < 10)
-	{
-		parentB = getBinaryTournament();
-		num_tries++;
-	}
+	int chosen1, chosen2;
+	Individual* parentA = getBinaryTournament(2, -1, chosen1);
+	Individual* parentB = getBinaryTournament(2, chosen1, chosen2);
+	// int num_tries = 1;
+	// // Pick two other individuals as long as they are identical (try at most 9 times)
+	// while (parentA->brokenPairsDistance(parentB) < MY_EPSILON && num_tries < 10)
+	// {
+	// 	parentB = getBinaryTournament(3, chosen1, chosen2);
+	// 	num_tries++;
+	// }
 
 	// Return the two individuals as a pair
 	return std::make_pair(parentA, parentB);

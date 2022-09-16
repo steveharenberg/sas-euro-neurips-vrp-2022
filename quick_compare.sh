@@ -1,7 +1,7 @@
 #!/bin/bash
 #!/bin/bash
 
-instanceSize=S
+instanceSize=L
 case $instanceSize in
  S)
     instanceList=instances_8_small.txt
@@ -32,7 +32,7 @@ esac
 epochTime=0
 
 PREFIX="quick${instanceSize}"
-DYNAMICFLAG=D
+DYNAMICFLAG=""
 case $DYNAMICFLAG in
  D)
     staticFlag=""
@@ -52,9 +52,9 @@ for SOLVER_SEED in 1 #2 3 4 5
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 
    
-   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline1"
-   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
-   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --strategy rangle"
+   # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline1"
+   # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
+   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --strategy rdist"
    ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
 done
 echo "Finished. Tabulating results..."

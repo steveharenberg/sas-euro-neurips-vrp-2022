@@ -129,24 +129,35 @@ void Genetic::doOXcrossover(Individual* result, std::pair<const Individual*, con
 
 	// Copy in place the elements from start to end (possibly "wrapping around" the end of the array)
 	int j = start;
-	while (j % params->nbClients != (end + 1) % params->nbClients)
+	int k;
+	int end_ = (end + 1) % params->nbClients;
+	while (j != end_)
 	{
-		result->chromT[j % params->nbClients] = parents.first->chromT[j % params->nbClients];
+		result->chromT[j] = parents.first->chromT[j];
 		// Mark the client as copied
-		freqClient[result->chromT[j % params->nbClients]] = true;
+		freqClient[result->chromT[j]] = true;
 		j++;
+		if (j == params->nbClients ) j = 0;
 	}
 
+	// if(k != (end_ >= start ? end_ - start : end_ - start + params->nbClients))
+	// 	std::cout << "INFO: " << k << ", " << (end_ > start ? end_ - start : end_ - start + params->nbClients) << std::endl;
+	k = end_ >= start ? end_ - start : end_ - start + params->nbClients;
+
 	// Fill the remaining elements in the order given by the second parent
-	for (int i = 1; i <= params->nbClients; i++)
+	// for (int i = 1; i <= params->nbClients; i++)
+	for (int i = end + 1; k < params->nbClients; i++)
 	{
+		if (i == params->nbClients ) i = 0;
 		// Check if the next client is already copied in place
-		int temp = parents.second->chromT[(end + i) % params->nbClients];
+		int temp = parents.second->chromT[i];
 		// If the client is not yet copied in place, copy in place now
 		if (freqClient[temp] == false)
 		{
-			result->chromT[j % params->nbClients] = temp;
+			result->chromT[j] = temp;
 			j++;
+			k++;
+			if (j == params->nbClients ) j = 0;
 		}
 	}
 

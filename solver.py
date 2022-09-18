@@ -106,6 +106,8 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 time_cost.append((time.time()-start_time, cost))
                 # Start next solution
                 routes = []
+            elif line.startswith('INFO'):
+                log(line)
             elif "EXCEPTION" in line:
                 raise Exception("HGS failed with exception: " + line)
         assert len(routes) == 0, "HGS has terminated with imcomplete solution (is the line with Cost missing?)"

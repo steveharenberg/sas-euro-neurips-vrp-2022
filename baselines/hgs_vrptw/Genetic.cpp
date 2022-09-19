@@ -25,6 +25,7 @@ void Genetic::run(int maxIterNonProd, int timeLimit)
 		// First select parents using getNonIdenticalParentsBinaryTournament
 		// Then use the selected parents to create new individuals using OX and SREX
 		// Finally select the best new individual based on bestOfSREXAndOXCrossovers
+		population->updateBiasedFitnesses();
 		Individual* offspring = bestOfSREXAndOXCrossovers(population->getNonIdenticalParentsBinaryTournament());
 
 		/* LOCAL SEARCH */

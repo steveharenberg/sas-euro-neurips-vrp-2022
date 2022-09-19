@@ -11,7 +11,7 @@
 
 #include "Params.h"
 #include "Matrix.h"
-#include "xorshift128.h"
+#include "pseudorandom.h"
 #include "commandline.h"
 #include "CircleSector.h"
 

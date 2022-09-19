@@ -33,7 +33,7 @@ SOFTWARE.*/
 #include <chrono>
 
 #include "Matrix.h"
-#include "xorshift128.h"
+#include "pseudorandom.h"
 
 #define MY_EPSILON 0.00001		// Precision parameter, used to avoid numerical instabilities
 #define PI 3.14159265359		// Number pi, with 11 decimal precision
@@ -122,7 +122,7 @@ public:
 	};
 
 	Config config;						// Stores all the parameter values
-	XorShift128 rng;					// Fast random number generator
+	PseudoRandomGenerator rng;					// Fast random number generator
 	std::chrono::system_clock::time_point startWallClockTime;			// Start wall clock time of this object (should be constructed at start of program)
 	std::clock_t startCPUTime;			// Start CPU time of this object
 

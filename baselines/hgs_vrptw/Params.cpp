@@ -23,7 +23,6 @@ Params::Params(const CommandLine& cl)
 	// Read and create some parameter values from the commandline
 	config = cl.config;
 	nbVehicles = config.nbVeh;
-	rng = XorShift128(config.seed);
 	startWallClockTime = std::chrono::system_clock::now();
 	startCPUTime = std::clock();
 
@@ -346,6 +345,25 @@ Params::Params(const CommandLine& cl)
 	else
 	{
 		// SKIPPING std::cout << "----- FLEET SIZE SPECIFIED IN THE COMMANDLINE: SET TO " << nbVehicles << " VEHICLES" << std::endl;
+	}
+
+	temp1 = PseudoRandomGenerator(config.seed);
+	temp2 = StandardRandomGenerator(config.seed);
+	temp3 = XorShift128(config.seed);
+	temp4 = CyclicGenerator(config.seed);
+	switch(config.randomGenerator){
+	case none:
+		randomNumberGenerator = &temp1;
+		break;
+	case stdlib:
+		randomNumberGenerator = &temp2;
+		break;
+	case xorshift128:
+		randomNumberGenerator = &temp3;
+		break;
+	case cyclic:
+		randomNumberGenerator = &temp4;
+		break;
 	}
 
 	// If the run is a DIMACS run, store the solution in the current folder

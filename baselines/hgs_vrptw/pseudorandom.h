@@ -3,6 +3,11 @@
 #define PSEUDORANDOM_H
 
 #include <limits.h>
+#include <cstdlib>
+#include <iostream>
+
+#define BIG_PRIME_1 77019043
+#define BIG_PRIME_2 67392103
 
 class PseudoRandomGenerator{
     unsigned seed;
@@ -22,8 +27,55 @@ public:
     {
 	    return UINT_MAX;
     }
-    unsigned operator()(){
+    virtual unsigned get(){
         return seed++;
+    }
+    virtual unsigned operator()(){
+        return seed++;
+    }
+};
+
+class CyclicGenerator : public PseudoRandomGenerator
+{
+    unsigned state;
+public:
+    CyclicGenerator(const int seed = 42) : PseudoRandomGenerator(seed){
+        state = seed;
+    }
+
+    unsigned get()
+	{
+        state+=BIG_PRIME_2;
+        state%=BIG_PRIME_1;
+        return state;
+    }
+
+    unsigned operator()()
+	{
+        state+=BIG_PRIME_2;
+        state%=BIG_PRIME_1;
+        return state;
+    }
+};
+
+
+class StandardRandomGenerator : public PseudoRandomGenerator
+{
+public:
+
+    StandardRandomGenerator(const int seed = 42) : PseudoRandomGenerator(seed)
+    {
+        srand(seed);
+    }
+
+    unsigned get()
+	{
+        return rand();
+    }
+
+    unsigned operator()()
+	{
+        return rand();
     }
 };
 
@@ -48,6 +100,22 @@ public:
         state_[3] = 521288629;
     }
 
+    unsigned get()
+	{
+        // Algorithm "xor128" from p. 5 of Marsaglia, "Xorshift RNGs"
+        unsigned t = state_[3];
+
+        // Perform a contrived 32-bit shift.
+    	unsigned s = state_[0];
+        state_[3] = state_[2];
+        state_[2] = state_[1];
+        state_[1] = s;
+
+        t ^= t << 11;
+        t ^= t >> 8;
+        // Return the new random number
+        return state_[0] = t ^ s ^ (s >> 19);
+    }
 
     // Defines the operator '()'. So a new random number will be returned when rng() is called on the XorShift128 instance rng.
     unsigned operator()()
@@ -63,7 +131,6 @@ public:
 
         t ^= t << 11;
         t ^= t >> 8;
-
         // Return the new random number
         return state_[0] = t ^ s ^ (s >> 19);
     }

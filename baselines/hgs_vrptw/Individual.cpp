@@ -110,7 +110,7 @@ void Individual::shuffleChromT()
 		chromT[i] = i + 1;
 	}
 	// Do a random shuffle chromT from begin to end
-	std::shuffle(chromT.begin(), chromT.end(), params->rng);
+	std::shuffle(chromT.begin(), chromT.end(), *(params->randomNumberGenerator));
 }
 
 void Individual::removeProximity(Individual* indiv)

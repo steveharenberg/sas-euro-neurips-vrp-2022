@@ -154,7 +154,9 @@ public:
 				else if (std::string(argv[i]) == "-preprocessTimeWindows")
 					config.preprocessTimeWindows = atoi(argv[i + 1]);	
 				else if (std::string(argv[i]) == "-warmstartFilePath")
-					config.warmstartFilePath = argv[i + 1];						
+					config.warmstartFilePath = argv[i + 1];
+				else if (std::string(argv[i]) == "-randomGenerator")
+					config.randomGenerator = atoi(argv[i + 1]);
 				else
 				{
 					// Output error message and help menu to the command line

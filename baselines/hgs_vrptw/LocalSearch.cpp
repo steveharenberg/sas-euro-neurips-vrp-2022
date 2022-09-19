@@ -393,11 +393,11 @@ void LocalSearch::run(Individual* indiv, double penaltyCapacityLS, double penalt
 	loadIndividual(indiv);
 
 	// Shuffling the order of the nodes explored by the LS to allow for more diversity in the search
-	std::shuffle(orderNodes.begin(), orderNodes.end(), params->rng);
-	std::shuffle(orderRoutes.begin(), orderRoutes.end(), params->rng);
+	std::shuffle(orderNodes.begin(), orderNodes.end(), *(params->randomNumberGenerator));
+	std::shuffle(orderRoutes.begin(), orderRoutes.end(), *(params->randomNumberGenerator));
 	for (int i = 1; i <= params->nbClients; i++)
 		if (params->rng() % params->config.nbGranular == 0)  // Designed to use O(nbGranular x n) time overall to avoid possible bottlenecks
-			std::shuffle(params->correlatedVertices[i].begin(), params->correlatedVertices[i].end(), params->rng);
+			std::shuffle(params->correlatedVertices[i].begin(), params->correlatedVertices[i].end(), *(params->randomNumberGenerator));
 
 	searchCompleted = false;
 	for (loopID = 0; !searchCompleted; loopID++)

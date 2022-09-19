@@ -43,6 +43,7 @@ ALL_HGS_ARGS = [
     "minCircleSectorSizeDegrees",
     "preprocessTimeWindows",
     "useDynamicParameters",
+    "randomGenerator",
 ]
 
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
@@ -85,7 +86,7 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         for hgs_arg in ALL_HGS_ARGS:
             if hgs_arg in vargs and vargs[hgs_arg] is not None:
                 argList += [f'-{hgs_arg}', str(vargs[hgs_arg])]
-
+    # log(' '.join(argList))
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
@@ -264,6 +265,7 @@ if __name__ == "__main__":
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
     parser.add_argument("--useDynamicParameters", type=int)
+    parser.add_argument("--randomGenerator", type=int)
     
     parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
 

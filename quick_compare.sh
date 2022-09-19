@@ -51,10 +51,10 @@ for SOLVER_SEED in 1 #2 3 4 5
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
 
    
-   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline2"
-   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
-   # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --strategy rangle"
+   # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline2"
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
+   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --randomGenerator 3"
+   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
 done
 echo "Finished. Tabulating results..."
 

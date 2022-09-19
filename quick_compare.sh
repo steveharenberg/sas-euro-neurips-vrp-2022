@@ -1,7 +1,6 @@
 #!/bin/bash
-#!/bin/bash
 
-instanceSize=S
+instanceSize=L
 case $instanceSize in
  S)
     instanceList=instances_8_small.txt

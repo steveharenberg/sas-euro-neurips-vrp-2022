@@ -711,16 +711,17 @@ void Genetic::insertUnplannedTasks2(Individual* offspring, std::vector<bool> unp
 			// 	}
 			// }
 
-			for (int i = 0; i < static_cast<int>(offspring->chromR[r].size()); i++)
+			for (int i = 0; i <= static_cast<int>(offspring->chromR[r].size()); i++)
 			{
 				int previousOnRoute = (i == 0) ? 0 : offspring->chromR[r][i - 1];
+				int currentOnRoute = (i == static_cast<int>(offspring->chromR[r].size())) ? 0 : offspring->chromR[r][i];
 				newDistanceToInsert = params->timeCost.get(previousOnRoute, c);
-				newDistanceFromInsert = params->timeCost.get(c, offspring->chromR[r][i]);
+				newDistanceFromInsert = params->timeCost.get(c, currentOnRoute);
 				if (params->cli[previousOnRoute].earliestArrival + newDistanceToInsert < latestArrival
-					&& earliestArrival + newDistanceFromInsert < params->cli[offspring->chromR[r][i]].latestArrival)
+					&& earliestArrival + newDistanceFromInsert < params->cli[currentOnRoute].latestArrival)
 				{
 					distanceDelta = newDistanceToInsert + newDistanceFromInsert
-						- params->timeCost.get(previousOnRoute, offspring->chromR[r][i]);
+						- params->timeCost.get(previousOnRoute, currentOnRoute);
 					if (distanceDelta < bestDistance)
 					{
 						bestDistance = distanceDelta;
@@ -729,17 +730,17 @@ void Genetic::insertUnplannedTasks2(Individual* offspring, std::vector<bool> unp
 				}
 			}
 
-			newDistanceToInsert = params->timeCost.get(offspring->chromR[r].back(), c);
-			if (params->cli[offspring->chromR[r].back()].earliestArrival + newDistanceToInsert < latestArrival)
-			{
-				distanceDelta = newDistanceToInsert + params->timeCost.get(0, c)
-					- params->timeCost.get(offspring->chromR[r].back(), 0);
-				if (distanceDelta < bestDistance)
-				{
-					bestDistance = distanceDelta;
-					bestLocation = { r, static_cast<int>(offspring->chromR[r].size()) };
-				}
-			}
+			// newDistanceToInsert = params->timeCost.get(offspring->chromR[r].back(), c);
+			// if (params->cli[offspring->chromR[r].back()].earliestArrival + newDistanceToInsert < latestArrival)
+			// {
+			// 	distanceDelta = newDistanceToInsert + params->timeCost.get(0, c)
+			// 		- params->timeCost.get(offspring->chromR[r].back(), 0);
+			// 	if (distanceDelta < bestDistance)
+			// 	{
+			// 		bestDistance = distanceDelta;
+			// 		bestLocation = { r, static_cast<int>(offspring->chromR[r].size()) };
+			// 	}
+			// }
 		}
 
 		offspring->chromR[bestLocation.first].insert(

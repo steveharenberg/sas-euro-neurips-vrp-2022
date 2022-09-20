@@ -65,10 +65,8 @@ private:
 	void doOXcrossover(Individual* result, std::pair<const Individual*, const Individual*> parents, int start, int end);
 
 	// Function to do two SREX Crossovers for a pair of individuals (the two parents) and return the best individual based on penalizedCost
-	Individual* crossoverSREX(std::pair<const Individual*, const Individual*> parents);
 	Individual* crossoverSREX2(std::pair<const Individual*, const Individual*> parents);
 	// Insert unplanned tasks (those that were in the removed routes of A but not the inserted routes of B or vice versa)
-	void insertUnplannedTasks(Individual* offspring, std::unordered_set<int> unplanned);
 	void insertUnplannedTasks2(Individual* offspring, std::vector<bool> unplanned);
 
 	// Function to do one OX and one SREX Crossover for a pair of individuals (the two parents), and get the best result based on penalizedCost

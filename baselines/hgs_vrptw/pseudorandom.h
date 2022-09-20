@@ -33,6 +33,12 @@ public:
     virtual unsigned operator()(){
         return seed++;
     }
+    // TODO: Add special pair sampler that splits a single random sample into a 2D sample, intended to be used together (for example sampling a start,end pair)
+    
+    virtual std::pair<unsigned, unsigned> getPair(int m, int n){
+        unsigned tmp = get();
+        return std::make_pair(tmp%m, tmp/m % n);
+    }
 };
 
 class CyclicGenerator : public PseudoRandomGenerator

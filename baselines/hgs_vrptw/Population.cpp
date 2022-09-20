@@ -414,11 +414,22 @@ Individual* Population::getBinaryTournament(int avoid, int &chosen)
 	Individual* individual2;
 
 	// Pick a first random number individual from the total population (of both feasible and infeasible individuals)
-	int place1;
+	int place1, place2;
+	std::pair<unsigned, unsigned> pair;
 	if(avoid<0)
-		place1 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
-	else{
-		place1 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1);
+		pair = params->randomNumberGenerator->getPair(
+			feasibleSubpopulation.size() + infeasibleSubpopulation.size(),
+			feasibleSubpopulation.size() + infeasibleSubpopulation.size()
+		);
+	else
+		pair = params->randomNumberGenerator->getPair(
+			feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1,
+			feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1
+		);
+
+	place1 = pair.first;
+	place2 = pair.second;
+	if(avoid >= 0){
 		if(place1>= avoid) place1++;
 	}
 	if (place1 >= static_cast<int>(feasibleSubpopulation.size()))
@@ -431,11 +442,7 @@ Individual* Population::getBinaryTournament(int avoid, int &chosen)
 	}
 
 	// Pick a second random number individual from the total population (of both feasible and infeasible individuals)
-	int place2;
-	if(avoid<0)
-		place2 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size());
-	else{
-		place2 = params->rng() % (feasibleSubpopulation.size() + infeasibleSubpopulation.size() - 1);
+	if(avoid >= 0){
 		if(place2>= avoid) place2++;
 	}
 	if (place2 >= static_cast<int>(feasibleSubpopulation.size()))

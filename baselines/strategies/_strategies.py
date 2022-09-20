@@ -91,7 +91,7 @@ def _fdist(observation: State,
 
 def _rdist(observation: State,
             rng: np.random.Generator):
-    return _dist(observation, rng, must_go_ratio=4.5)
+    return _dist(observation, rng, must_go_ratio=5.0)
 
 def _dist(observation: State,
            rng: np.random.Generator,

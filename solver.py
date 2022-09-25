@@ -120,7 +120,6 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
 
     nsols = 0
     solutions = []
-    log(f"Running hgs for {time_limit} seconds.")
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
@@ -183,7 +182,7 @@ def get_subproblem(instance, solution, rng, k = 3, route_id = None):
     return tools.filter_instance(instance, mask), subproblem_routes
 
 
-def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_time_limit=2, args=None):
+def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_time_limit=5, initial_time=15, warmstart=True, args=None):
     start_time = time.time()
     if rng is None:
         rng = np.random.default_rng(args.solver_seed)
@@ -196,16 +195,18 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=Non
     
     curr_solutions = []
     remain_time = time_limit - (time.time() - start_time)
-    iter_time = int(min([subproblem_time_limit, remain_time]))
-    curr_solutions += run_hgs(instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.001, 0, args)
+    iter_time = int(min([initial_time, remain_time]))
+    curr_solutions += run_hgs(instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.001,  1, args)
+    routes, cost = curr_solutions[-1]
+    yield routes, cost    
     remain_time = time_limit - (time.time() - start_time)
-    while remain_time > 0:
+    while remain_time > 1:
         iter_time = int(min([subproblem_time_limit, remain_time]))
-        routes, cost = curr_solutions[-1]
-        sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng)
+        sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, k=len(routes)//3)
         sub_instance_filename = os.path.join(tmp_dir, "subproblem.vrptw")
         tools.write_vrplib(sub_instance_filename, sub_instance, is_vrptw=True)
-        sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.001, 0, args)
+        log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
+        sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.000, 0, args)
         if len(sub_solutions) > 0:
             sub_routes, sub_cost = sub_solutions[-1]
             new_routes = [i for j, i in enumerate(routes) if j not in sub_instance_routes]
@@ -215,8 +216,9 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=Non
             log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
             if new_cost < cost:
                 curr_solutions.append((new_routes, new_cost))
+                routes, cost = curr_solutions[-1]
+                yield routes, cost    
         remain_time = time_limit - (time.time() - start_time)
-    yield routes, cost    
 
     
 

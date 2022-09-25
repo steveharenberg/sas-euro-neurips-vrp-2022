@@ -137,7 +137,6 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
                     routes.append([int(node) for node in route.split(" ")])
             elif line.startswith('Cost'):
                 # End of solution
-<<<<<<< HEAD
                 nsols += 1
                 if nsols > num_sols_ignore:
                     solution = routes
@@ -194,7 +193,7 @@ def subproblem_warm_start(routes, warmstart_filepath):
         with open(warmstart_filepath, 'w') as fout:
             fout.write(routesToStr(routes) + "\n")
 
-def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=7, subproblem_time_limit=5, initial_time=5, warmstart=False, args=None):
+def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=7, subproblem_time_limit=5, initial_time=5, warmstart=True, args=None):
     start_time = time.time()
     if rng is None:
         rng = np.random.default_rng(args.solver_seed)
@@ -226,7 +225,8 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
         tools.write_vrplib(sub_instance_filename, sub_instance, is_vrptw=True)
         
         # info_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
-        # log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
+        if args.verbose:
+            log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
         # log([routes[r] for r in sub_instance_routes])
         if warmstart:
             assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
@@ -237,10 +237,11 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
         if len(sub_solutions) > 0:
             sub_routes, sub_cost = sub_solutions[-1]
             new_routes = [i for j, i in enumerate(routes) if j not in sub_instance_routes]
-            new_routes += [instance['request_idx'][route] for route in sub_routes]
+            new_routes += [sub_instance['request_idx'][route] for route in sub_routes]
             # log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
             new_cost = tools.validate_static_solution(instance, new_routes, allow_skipped_customers=not info['is_static'])
-            # log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
+            if args.verbose:
+                log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
             if new_cost < cost:
                 curr_solutions.append((new_routes, new_cost))
                 routes, cost = curr_solutions[-1]
@@ -421,7 +422,6 @@ if __name__ == "__main__":
     parser.add_argument("--hgsWarmstartTime", type=float, default=2)
     parser.add_argument("--hgsWarmstartMode", choices=['BEST', 'BEST_WORST', 'ALL'], default='BEST')
     # other
-    parser.add_argument("--logTimeCost", action='store_true')
     parser.add_argument("--randomGenerator", type=int)
     
     parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")

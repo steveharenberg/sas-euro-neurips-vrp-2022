@@ -64,9 +64,9 @@ public:
 	bool isFeasible;															// Feasibility status of the individual
 	double biasedFitness;														// Biased fitness of the solution
 
-	void calculateRouteCentroids();
-	void calculateRouteNearestNeighbors();
-	double centroidDistanceSquared(int i, int j);
+	// void calculateRouteCentroids();
+	// void calculateRouteNearestNeighbors();
+	// double centroidDistanceSquared(int i, int j);
 
 	// Measuring cost of a solution from the information of chromR
 	void evaluateCompleteCost();

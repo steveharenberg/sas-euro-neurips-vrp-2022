@@ -7,41 +7,41 @@
 #include "Individual.h"
 #include "Params.h"
 
-double Individual::centroidDistanceSquared(int i, int j){
-	double dx = routeCentroids[j].first - routeCentroids[i].first;
-	double dy = routeCentroids[j].second - routeCentroids[i].second;
-	return dx*dx + dy*dy;
-}
-void Individual::calculateRouteCentroids(){
-	double x, y;
-	size_t size;
-	nbNonEmptyRoutes = 0;
-	for (int r = 0; r < params->nbVehicles; r++)
-	{
-		if (chromR[r].empty()) continue;
-		x = 0;
-		y = 0;
+// double Individual::centroidDistanceSquared(int i, int j){
+// 	double dx = routeCentroids[j].first - routeCentroids[i].first;
+// 	double dy = routeCentroids[j].second - routeCentroids[i].second;
+// 	return dx*dx + dy*dy;
+// }
+// void Individual::calculateRouteCentroids(){
+// 	double x, y;
+// 	size_t size;
+// 	nbNonEmptyRoutes = 0;
+// 	for (int r = 0; r < params->nbVehicles; r++)
+// 	{
+// 		if (chromR[r].empty()) continue;
+// 		x = 0;
+// 		y = 0;
 
-		for(int c:chromR[r]){
-			x += params->cli[c].coordX;
-			y += params->cli[c].coordY;
-		}
-		size = chromR.size()
-		routeCentroids[r] = std::make_pair(x / size, y / size);
-		nonEmptyRoutes[nbNonEmptyRoutes++] = r;
-}
-void Individual::calculateRouteNearestNeighbors(int k){
-	Matrix distances = Matrix(nbNonEmptyRoutes); 
-	double temp;
-	for(int i = 0; i<nbNonEmptyRoutes; ++i){
-		distances.set(i,i,0.0);
-		for(int j = i+1; j<nbNonEmptyRoutes; ++j){
-			temp = centroidDistanceSquared(routeC);
-			distances.set(i,j,temp);
-			distances.set(j,i,temp);
-		}
-	}
-}
+// 		for(int c:chromR[r]){
+// 			x += params->cli[c].coordX;
+// 			y += params->cli[c].coordY;
+// 		}
+// 		size = chromR.size();
+// 		routeCentroids[r] = std::make_pair(x / size, y / size);
+// 		nonEmptyRoutes[nbNonEmptyRoutes++] = r;
+// }
+// void Individual::calculateRouteNearestNeighbors(int k){
+// 	Matrix distances = Matrix(nbNonEmptyRoutes); 
+// 	double temp;
+// 	for(int i = 0; i<nbNonEmptyRoutes; ++i){
+// 		distances.set(i,i,0.0);
+// 		for(int j = i+1; j<nbNonEmptyRoutes; ++j){
+// 			temp = centroidDistanceSquared(routeC);
+// 			distances.set(i,j,temp);
+// 			distances.set(j,i,temp);
+// 		}
+// 	}
+// }
 
 void Individual::evaluateCompleteCost()
 {

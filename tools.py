@@ -1,6 +1,7 @@
 import json
 import os
 import numpy as np
+from environment import State
 
 # https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -61,6 +62,24 @@ def which(program):
             if is_exe(exe_file):
                 return exe_file
     return None
+
+def filter_instance(observation: State, mask: np.ndarray):
+    res = {}
+
+    for key, value in observation.items():
+        if key == 'capacity':
+            res[key] = value
+            continue
+
+        if key == 'duration_matrix':
+            res[key] = value[mask]
+            res[key] = res[key][:, mask]
+            continue
+
+        res[key] = value[mask]
+
+    return res
+
 
 def compute_solution_driving_time(instance, solution):
     return sum([

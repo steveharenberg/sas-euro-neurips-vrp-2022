@@ -382,6 +382,25 @@ void LocalSearch::constructIndividualWithSeedOrder(int toleratedCapacityViolatio
 	exportIndividual(indiv);
 }
 
+void LocalSearch::runSubproblem()
+{
+	///////////////////////////////
+	// identify subproblems
+	///////////////////////////////
+	
+	///////////////////////////////
+	// select a subproblem
+	///////////////////////////////
+	
+	///////////////////////////////
+	// set up the subproblem
+	///////////////////////////////
+	
+	///////////////////////////////
+	// solve the subproblem
+	///////////////////////////////
+}
+
 void LocalSearch::run(Individual* indiv, double penaltyCapacityLS, double penaltyTimeWarpLS)
 {
 	static const bool neverIntensify = params->config.intensificationProbabilityLS == 0;

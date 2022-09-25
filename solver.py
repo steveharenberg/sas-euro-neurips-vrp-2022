@@ -107,9 +107,11 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
     assert os.path.isfile(executable), f"HGS executable {executable} does not exist!"
 
     argList = [ executable, instance_filename, str(time_limit), 
-                '-veh', '-1', '-useWallClockTime', '1',
-                '-warmstartFilePath', warmstart_filepath
+                '-veh', '-1', '-useWallClockTime', '1'
               ]
+    if warmstart_filepath is not None:
+        argList += ['-warmstartFilePath', warmstart_filepath]
+        
     if args is not None:
         vargs = vars(args)
         for hgs_arg in ALL_HGS_ARGS:
@@ -120,6 +122,8 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
 
     nsols = 0
     solutions = []
+    
+    # log(' '.join(argList))
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
@@ -156,6 +160,8 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
 
 def get_subproblem(instance, solution, rng, k = 3, route_id = None):
     n_routes = len(solution)
+    if k >= n_routes:
+        return instance, list(range(n_routes))
     if route_id is None:
         route_id = rng.integers(n_routes)
     # find centroids
@@ -181,8 +187,13 @@ def get_subproblem(instance, solution, rng, k = 3, route_id = None):
     # log(tools.filter_instance(instance, mask))
     return tools.filter_instance(instance, mask), subproblem_routes
 
+def subproblem_warm_start(routes, warmstart_filepath):
+    # yield routes, cost
+    if warmstart_filepath is not None:
+        with open(warmstart_filepath, 'w') as fout:
+            fout.write(routesToStr(routes) + "\n")
 
-def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_time_limit=5, initial_time=15, warmstart=True, args=None):
+def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=7, subproblem_time_limit=5, initial_time=5, warmstart=False, args=None):
     start_time = time.time()
     if rng is None:
         rng = np.random.default_rng(args.solver_seed)
@@ -190,34 +201,49 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, rng=Non
     os.makedirs(tmp_dir, exist_ok=True)
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)    
-    warmstart_filepath = os.path.join(tmp_dir, "warmstart")
+    warmstart_filepath = os.path.join(tmp_dir, "warmstart") if warmstart else None
     args.warmstartFilePath = warmstart_filepath
     
     curr_solutions = []
     remain_time = time_limit - (time.time() - start_time)
     iter_time = int(min([initial_time, remain_time]))
-    curr_solutions += run_hgs(instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.001,  1, args)
+    iteration = 0
+    
+    curr_solutions += run_hgs(instance_filename, None, iter_time, tmp_dir, seed, 0, 1.001,  1, args)
     routes, cost = curr_solutions[-1]
-    yield routes, cost    
+    yield routes, cost
+    
+    
     remain_time = time_limit - (time.time() - start_time)
     while remain_time > 1:
+        iteration += 1
         iter_time = int(min([subproblem_time_limit, remain_time]))
-        sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, k=len(routes)//3)
+        subproblem_max_k = max([len(routes)//3, subproblem_min_k])
+        subproblem_k = rng.integers(subproblem_max_k - subproblem_min_k) + subproblem_min_k if subproblem_max_k > subproblem_min_k else subproblem_min_k
+        sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, k=subproblem_k)
         sub_instance_filename = os.path.join(tmp_dir, "subproblem.vrptw")
         tools.write_vrplib(sub_instance_filename, sub_instance, is_vrptw=True)
-        log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
-        sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed, 0, 1.000, 0, args)
+        
+        # info_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
+        # log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
+        # log([routes[r] for r in sub_instance_routes])
+        if warmstart:
+            assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
+            inv_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
+            subproblem_warm_start([[inv_map[k] for k in routes[r]] for r in sub_instance_routes], warmstart_filepath)
+            
+        sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed + iteration, 0, 1.000, 0, args)
         if len(sub_solutions) > 0:
             sub_routes, sub_cost = sub_solutions[-1]
             new_routes = [i for j, i in enumerate(routes) if j not in sub_instance_routes]
-            new_routes += [sub_instance['request_idx'][route] for route in sub_routes]
+            new_routes += [instance['request_idx'][route] for route in sub_routes]
             # log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
-            new_cost = tools.validate_static_solution(instance, new_routes)
-            log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
+            new_cost = tools.validate_static_solution(instance, new_routes, allow_skipped_customers=not info['is_static'])
+            # log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
             if new_cost < cost:
                 curr_solutions.append((new_routes, new_cost))
                 routes, cost = curr_solutions[-1]
-                yield routes, cost    
+                yield routes, cost
         remain_time = time_limit - (time.time() - start_time)
 
     
@@ -252,7 +278,7 @@ def run_oracle(args, env):
     hindsight_problem = env.get_hindsight_problem()
 
     log(f"Start computing oracle solution with {len(hindsight_problem['coords'])} requests...")
-    oracle_solution = min(solve_static_vrptw(hindsight_problem, time_limit=epoch_tlim, tmp_dir=args.tmp_dir), key=lambda x: x[1])[0]
+    oracle_solution = min(solve_static_vrptw(hindsight_problem, info, time_limit=epoch_tlim, tmp_dir=args.tmp_dir), key=lambda x: x[1])[0]
     oracle_cost = tools.validate_static_solution(hindsight_problem, oracle_solution)
     log(f"Found oracle solution with cost {oracle_cost}")
 
@@ -307,7 +333,7 @@ def run_baseline(args, env, oracle_solution=None):
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
             # we will exactly use the solver_seed whereas in the dynamic problem randomness is in the instance
-            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, rng=rng, args=args))
+            solutions = list(solve_static_vrptw(epoch_instance_dispatch, static_info, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, rng=rng, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
 

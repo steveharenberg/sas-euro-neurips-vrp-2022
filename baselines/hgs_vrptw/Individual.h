@@ -27,6 +27,7 @@ SOFTWARE.*/
 #include <vector>
 #include <set>
 #include <string>
+#include <unordered_map>
 
 #include "Params.h"
 
@@ -54,9 +55,18 @@ public:
 	std::vector<std::vector<int>> chromR;										// For each vehicle, the associated sequence of deliveries (complete solution). Size is nbVehicles. Routes are stored starting index maxVehicles-1, so the first indices will likely be empty
 	std::vector<int> successors;												// For each node, the successor in the solution (can be the depot 0). Size is nbClients+1
 	std::vector<int> predecessors;												// For each node, the predecessor in the solution (can be the depot 0). Size is nbClients+1
-	std::multiset<std::pair<double, Individual*>> indivsPerProximity;			// The other individuals in the population (can not be the depot 0), ordered by increasing proximity (the set container follows a natural ordering based on the value of the first pair)
+	std::multiset<double> proximities;			// The proximities of other individuals in the population (can not be the depot 0), ordered by increasing proximity (the set container follows a natural ordering based on the value of the first pair)
+	std::unordered_map<Individual*,double> proximityPerIndividual;
+	std::vector<int> nonEmptyRoutes;
+	std::vector<std::pair<double, double>> routeCentroids;
+	std::vector<std::vector<int>> routeNearestNeighbors;
+	int nbNonEmptyRoutes;
 	bool isFeasible;															// Feasibility status of the individual
 	double biasedFitness;														// Biased fitness of the solution
+
+	void calculateRouteCentroids();
+	void calculateRouteNearestNeighbors();
+	double centroidDistanceSquared(int i, int j);
 
 	// Measuring cost of a solution from the information of chromR
 	void evaluateCompleteCost();

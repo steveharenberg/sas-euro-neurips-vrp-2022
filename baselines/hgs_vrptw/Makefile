@@ -6,9 +6,13 @@ CCC = g++
 INLINES:=
 INLINES:=$(INLINES) -finline-functions
 INLINES:=$(INLINES) -finline-limit=100000
-# INLINES:=
-# CCFLAGS = -Wall -O2 -g -std=c++2a $(INLINES)
-CCFLAGS = -Wall -O3 -g -std=c++2a $(INLINES)
+
+SANITIZERS:=
+SANITIZERS:=$(SANITIZERS) -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow
+# SANITIZERS:=$(SANITIZERS) -fno-sanitize=null -fno-sanitize=alignment
+CCFLAGS = -Wall -O2 -std=c++2a $(INLINES)
+# CCFLAGS = -Wall -O3 -std=c++2a $(INLINES)
+# CCFLAGS = -Wall -O2 -g -std=c++2a $(INLINES) $(SANITIZERS)
 # CCFLAGS = -Wall -O3 -std=c++2a
 # CCFLAGS = -Wall -std=c++2a -g
 # CCFLAGS = -Wall -std=c++2a -g

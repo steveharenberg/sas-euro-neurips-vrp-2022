@@ -53,6 +53,7 @@ private:
 	Individual bestSolutionRestart;							// Best solution found during the current restart of the algorthm
 	Individual bestSolutionOverall;							// Best solution found during the complete execution of the algorithm
 	Solutions const& warmstartSolutions;					// Solutions to warmstart the GA with
+	std::vector<std::pair<double, int>> ranking;       // reusable storage for ranking operations
 
 	// Evaluates the biased fitness of all individuals in the population
 	void updateBiasedFitnesses(SubPopulation& pop);
@@ -80,8 +81,11 @@ public:
 	// Adaptation of the penalty parameters (this also updates the evaluations)
 	void managePenalties();
 
+	void updateBiasedFitnesses();
+
 	// Selects an individal by binary tournament
-	Individual* getBinaryTournament();
+	Individual* getBinaryTournament(int avoid, int &chosen);
+	Individual* getBinaryTournament(int rounds, int avoid, int &chosen); // recursive version
 
 	// Selects two non-identical parents by binary tournament and return as a pair
 	std::pair<Individual*, Individual*> getNonIdenticalParentsBinaryTournament();

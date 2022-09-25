@@ -151,15 +151,21 @@ void LocalSearch::initializeConstruction(Individual* indiv, std::vector<NodeToIn
 
 void LocalSearch::constructIndividualBySweep(int fillPercentage, Individual* indiv)
 {
-	std::vector<NodeToInsert> nodesToInsert;
+	nodesToInsert.clear();
 	initializeConstruction(indiv, &nodesToInsert);
 
 	std::vector< std::vector< int > > nodeIndicesPerRoute;
 
 	// Sort nodes according to angle with depot.
-	std::sort(std::begin(nodesToInsert),
-		std::end(nodesToInsert),
-		[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; });
+	// std::sort(std::begin(nodesToInsert),
+	// 	std::end(nodesToInsert),
+	// 	[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot < b.angleFromDepot; });
+	// insertion sort
+	for (auto i = std::begin(nodesToInsert); i != std::end(nodesToInsert); ++i) {
+		std::rotate(std::upper_bound(std::begin(nodesToInsert), i, *i, 
+			[](NodeToInsert a, NodeToInsert b) {return a.angleFromDepot <= b.angleFromDepot; })
+		, i, i+1);
+	}
 
 	// Distribute clients over routes.
 	int load = 0;
@@ -198,7 +204,7 @@ void LocalSearch::constructIndividualBySweep(int fillPercentage, Individual* ind
 		// Sort routes with short time window in increasing end of time window.
 		std::sort(std::begin(nodeIndicesToInsertShortTw),
 			std::end(nodeIndicesToInsertShortTw),
-			[&nodesToInsert](int a, int b) { return nodesToInsert[a].twData.latestArrival < nodesToInsert[b].twData.latestArrival; });
+			[this](int a, int b) { return nodesToInsert[a].twData.latestArrival < nodesToInsert[b].twData.latestArrival; });
 
 		// Insert nodes with short time window in order in the route.
 		Node* prev = routes[r].depot;
@@ -254,7 +260,7 @@ void LocalSearch::constructIndividualBySweep(int fillPercentage, Individual* ind
 void LocalSearch::constructIndividualWithSeedOrder(int toleratedCapacityViolation, int toleratedTimeWarp,
 	bool useSeedClientFurthestFromDepot, Individual* indiv)
 {
-	std::vector<NodeToInsert> nodesToInsert;
+	nodesToInsert.clear();
 	initializeConstruction(indiv, &nodesToInsert);
 
 	std::set<int> unassignedNodeIndices;
@@ -376,6 +382,25 @@ void LocalSearch::constructIndividualWithSeedOrder(int toleratedCapacityViolatio
 	exportIndividual(indiv);
 }
 
+void LocalSearch::runSubproblem()
+{
+	///////////////////////////////
+	// identify subproblems
+	///////////////////////////////
+	
+	///////////////////////////////
+	// select a subproblem
+	///////////////////////////////
+	
+	///////////////////////////////
+	// set up the subproblem
+	///////////////////////////////
+	
+	///////////////////////////////
+	// solve the subproblem
+	///////////////////////////////
+}
+
 void LocalSearch::run(Individual* indiv, double penaltyCapacityLS, double penaltyTimeWarpLS)
 {
 	static const bool neverIntensify = params->config.intensificationProbabilityLS == 0;
@@ -387,11 +412,11 @@ void LocalSearch::run(Individual* indiv, double penaltyCapacityLS, double penalt
 	loadIndividual(indiv);
 
 	// Shuffling the order of the nodes explored by the LS to allow for more diversity in the search
-	std::shuffle(orderNodes.begin(), orderNodes.end(), params->rng);
-	std::shuffle(orderRoutes.begin(), orderRoutes.end(), params->rng);
+	std::shuffle(orderNodes.begin(), orderNodes.end(), *(params->randomNumberGenerator));
+	std::shuffle(orderRoutes.begin(), orderRoutes.end(), *(params->randomNumberGenerator));
 	for (int i = 1; i <= params->nbClients; i++)
 		if (params->rng() % params->config.nbGranular == 0)  // Designed to use O(nbGranular x n) time overall to avoid possible bottlenecks
-			std::shuffle(params->correlatedVertices[i].begin(), params->correlatedVertices[i].end(), params->rng);
+			std::shuffle(params->correlatedVertices[i].begin(), params->correlatedVertices[i].end(), *(params->randomNumberGenerator));
 
 	searchCompleted = false;
 	for (loopID = 0; !searchCompleted; loopID++)
@@ -1684,6 +1709,7 @@ LocalSearch::LocalSearch(Params* params) : params(params)
 	routes = std::vector < Route >(params->nbVehicles);
 	depots = std::vector < Node >(params->nbVehicles);
 	depotsEnd = std::vector < Node >(params->nbVehicles);
+	nodesToInsert = std::vector<NodeToInsert>(params->nbClients-1);
 	bestInsertInitializedForRoute = std::vector < bool >(params->nbVehicles, false);
 	bestInsertClient = std::vector < std::vector <ThreeBestInsert> >(params->nbVehicles, std::vector <ThreeBestInsert>(params->nbClients + 1));
 	bestInsertClientTW = std::vector < std::vector <ThreeBestInsert> >(params->nbVehicles, std::vector <ThreeBestInsert>(params->nbClients + 1));

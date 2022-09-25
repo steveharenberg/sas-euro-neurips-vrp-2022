@@ -303,7 +303,8 @@ std::vector<Index> TSP::raw_solve(unsigned nb_threads,
 Solution TSP::solve(unsigned,
                     unsigned nb_threads,
                     const Timeout& timeout,
-                    const std::vector<HeuristicParameters>&) const {
+                    const std::vector<HeuristicParameters>& h_param,
+                    bool) const {
   RawRoute r(_input, 0, 0);
   r.set_route(_input, raw_solve(nb_threads, timeout));
   return utils::format_solution(_input, {r});

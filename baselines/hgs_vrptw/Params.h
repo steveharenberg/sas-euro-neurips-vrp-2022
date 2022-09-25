@@ -33,13 +33,20 @@ SOFTWARE.*/
 #include <chrono>
 
 #include "Matrix.h"
-#include "xorshift128.h"
+#include "pseudorandom.h"
 
 #define MY_EPSILON 0.00001		// Precision parameter, used to avoid numerical instabilities
 #define PI 3.14159265359		// Number pi, with 11 decimal precision
 
 typedef std::vector<std::vector<int>> Routes;
 typedef std::vector<Routes> Solutions;
+
+enum randomGenerator {
+	none,
+	stdlib,
+	xorshift128,
+	cyclic
+};
 
 // Structure of a Client, including its index, position, and all other variables and parameters
 struct Client
@@ -119,10 +126,15 @@ public:
 
 		bool preprocessTimeWindows = false;					// Removes arcs if they violate time windows
 		std::string warmstartFilePath;							// Path to file with solutions for warmstarting population
+		int randomGenerator = none;
 	};
 
 	Config config;						// Stores all the parameter values
-	XorShift128 rng;					// Fast random number generator
+	PseudoRandomGenerator temp1;
+	StandardRandomGenerator temp2;
+	XorShift128 temp3;
+	CyclicGenerator temp4;
+	PseudoRandomGenerator *randomNumberGenerator;					// Fast random number generator
 	std::chrono::system_clock::time_point startWallClockTime;			// Start wall clock time of this object (should be constructed at start of program)
 	std::clock_t startCPUTime;			// Start CPU time of this object
 
@@ -166,6 +178,11 @@ public:
 	void SetCorrelatedVertices();
 
 	Solutions readWarmstartSolutions();
+
+	inline
+	unsigned rng(){
+		return randomNumberGenerator->get();
+	}
 };
 
 #endif

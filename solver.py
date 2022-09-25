@@ -47,6 +47,7 @@ ALL_HGS_ARGS = [
     "minCircleSectorSizeDegrees",
     "preprocessTimeWindows",
     "useDynamicParameters",
+    "randomGenerator",
 ]
 
 MIN_VROOM_TIME = 1
@@ -59,8 +60,7 @@ def routesToStr(routes):
     routesStr = ",".join(str(v) for v in routes[0])
     for route in routes[1:]:
         routesStr += "~"
-        routesStr += ",".join(str(v) for v in route)
-    
+        routesStr += ",".join(str(v) for v in route)    
     return routesStr
 
 
@@ -137,6 +137,7 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
                     routes.append([int(node) for node in route.split(" ")])
             elif line.startswith('Cost'):
                 # End of solution
+<<<<<<< HEAD
                 nsols += 1
                 if nsols > num_sols_ignore:
                     solution = routes
@@ -301,9 +302,9 @@ def run_baseline(args, env, oracle_solution=None):
         if static_info['start_epoch'] == static_info['end_epoch']:
             epoch_instance = observation['epoch_instance']
             n_cust = len(epoch_instance['request_idx']) - 1
-            if n_cust < 300:
+            if n_cust <= 300:
                 args.epoch_tlim = 3*60
-            elif n_cust < 500:
+            elif n_cust <= 500:
                 args.epoch_tlim = 5*60
             else:
                 args.epoch_tlim = 8*60
@@ -421,6 +422,9 @@ if __name__ == "__main__":
     parser.add_argument("--hgsWarmstartMode", choices=['BEST', 'BEST_WORST', 'ALL'], default='BEST')
     # other
     parser.add_argument("--logTimeCost", action='store_true')
+    parser.add_argument("--randomGenerator", type=int)
+    
+    parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
 
     args, unknown = parser.parse_known_args()
 

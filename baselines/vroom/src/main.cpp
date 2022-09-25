@@ -78,6 +78,9 @@ int main(int argc, char** argv) {
     ("x,explore",
      "exploration level to use (0..5)",
      cxxopts::value<unsigned>(cl_args.exploration_level)->default_value("5"))
+    ("s,print-solutions",
+     "prints solutions as they are found if they improve current best solution",
+     cxxopts::value<bool>(cl_args.print_multiple_sols)->default_value("false"))     
     ("stdin",
      "optional input positional arg",
      cxxopts::value<std::string>(cl_args.input));
@@ -189,10 +192,12 @@ int main(int argc, char** argv) {
                             : problem_instance.solve(cl_args.exploration_level,
                                                      cl_args.nb_threads,
                                                      cl_args.timeout,
-                                                     cl_args.h_params);
+                                                     cl_args.h_params,
+                                                     cl_args.print_multiple_sols);
 
     // Write solution.
-    vroom::io::write_to_json(sol, cl_args.geometry, cl_args.output_file);
+    if (!cl_args.print_multiple_sols) // otherwise solution is already written (albeit it is not necessarily the last one written)
+      vroom::io::write_to_json(sol, cl_args.geometry, cl_args.output_file);
   } catch (const vroom::Exception& e) {
     std::cerr << "[Error] " << e.message << std::endl;
     vroom::io::write_to_json({e.error_code, e.message},

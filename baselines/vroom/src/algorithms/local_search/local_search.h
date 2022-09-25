@@ -49,6 +49,8 @@ private:
   std::vector<Route>& _best_sol;
   utils::SolutionIndicators _best_sol_indicators;
 
+  bool _print_multiple_sols = false;
+
 #ifdef LOG_LS_OPERATORS
   // Store operator usage stats.
   std::array<unsigned, OperatorName::MAX> tried_moves;
@@ -76,7 +78,8 @@ public:
   LocalSearch(const Input& input,
               std::vector<Route>& tw_sol,
               unsigned max_nb_jobs_removal,
-              const Timeout& timeout);
+              const Timeout& timeout,
+              bool print_multiple_sols = false);
 
   utils::SolutionIndicators indicators() const;
 

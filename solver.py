@@ -200,7 +200,7 @@ def subproblem_warm_start(routes, warmstart_filepath):
         with open(warmstart_filepath, 'w') as fout:
             fout.write(routesToStr(routes) + "\n")
 
-def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=7, subproblem_time_limit=5, initial_time=5, warmstart=True, args=None):
+def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=5, subproblem_time_limit=5, initial_time=60, warmstart=True, args=None):
     start_time = time.time()
     if rng is None:
         rng = np.random.default_rng(args.solver_seed)
@@ -216,7 +216,7 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
     iter_time = int(min([initial_time, remain_time]))
     iteration = 0
     
-    curr_solutions += run_hgs(instance_filename, None, iter_time, tmp_dir, seed, 0, 1.001,  1, args)
+    curr_solutions += run_hgs(instance_filename, None, iter_time, tmp_dir, seed, 0, 1.0,  1, args)
     routes, cost = curr_solutions[-1]
     yield routes, cost
     
@@ -264,8 +264,10 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
                 yield routes, cost
             if improvement > 1.005:
                 routes_distribution[route_id] *= 100 * (improvement - 1) / 0.01
+            elif improvement > 1.0001:
+                routes_distribution[route_id] *= 10 * (improvement - 1) / 0.01
             else:
-                routes_distribution[route_id] /= 100
+                routes_distribution[route_id] = np.mean(routes_distribution) / 100
             # routes_distribution[route_id] /= 3
         # log(f"dist={routes_distribution[:n_routes]}")
         remain_time = time_limit - (time.time() - start_time)

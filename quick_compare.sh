@@ -31,7 +31,7 @@ esac
 epochTime=0
 
 PREFIX="quick${instanceSize}"
-DYNAMICFLAG=""
+DYNAMICFLAG="D"
 case $DYNAMICFLAG in
  D)
     staticFlag=""
@@ -54,7 +54,7 @@ for SOLVER_SEED in 1 #2 3 4 5
    # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline2"
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
    # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --randomGenerator 1"
-   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual3 --solver_seed 212165  --randomGenerator 3"
+   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_subproblem1 --solver_seed 212165  --randomGenerator 3"
    ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
 done
 echo "Finished. Tabulating results..."

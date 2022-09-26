@@ -97,7 +97,16 @@ def run_vroom(instance, tmp_dir, time_limit, explore_level, init_routes=[]):
     return solutions
 
 
-def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp", seed=1, num_sols_ignore=0, min_improvement=0, min_sols=0, args=None):
+def run_hgs(instance_filename,
+            warmstart_filepath,
+            time_limit=3600,
+            tmp_dir="tmp",
+            seed=1,
+            num_sols_ignore=0,
+            min_improvement=0,
+            min_sols=0,
+            args=None,
+            print_argList=False):
     # if args.verbose:    
     #     print(f"\nRunning HGS", file=sys.__stderr__)
     executable = os.path.join('baselines', 'hgs_vrptw', 'genvrp')    
@@ -125,7 +134,8 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
     
     best_cost = float('inf')
     
-    # log(' '.join(argList))
+    if print_argList:
+        log(' '.join(argList))
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
         routes = []
         for line in p.stdout:
@@ -163,7 +173,7 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
 def get_subproblem(instance, solution, rng, distribution = None, k = 3, route_id = None):
     n_routes = len(solution)
     if k >= n_routes:
-        return instance, list(range(n_routes))
+        return 0, instance, list(range(n_routes))
     if route_id is None:
         if distribution is None:
             route_id = rng.integers(n_routes)
@@ -200,16 +210,39 @@ def subproblem_warm_start(routes, warmstart_filepath):
         with open(warmstart_filepath, 'w') as fout:
             fout.write(routesToStr(routes) + "\n")
 
-def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, rng=None, subproblem_min_k=5, subproblem_time_limit=5, initial_time=60, warmstart=True, args=None):
+def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rng=None, subproblem_min_k=5, subproblem_time_limit=2, initial_time=None, warmstart=True, args=None):
     start_time = time.time()
+    
+    if instance['coords'].shape[0] <= 1:
+        yield [], 0
+        # time_cost.append((time.time()-start_time, 0))
+        return
+
+    if instance['coords'].shape[0] <= 2:
+        solution = [[1]]
+        cost = tools.validate_static_solution(instance, solution)
+        yield solution, cost
+        # time_cost.append((time.time()-start_time, cost))
+        return
+    
+    
     if rng is None:
         rng = np.random.default_rng(args.solver_seed)
+        
+    if tmp_dir is None:
+        if 'tmp_dir' in args:
+            tmp_dir = args.tmp_dir
+        else:
+            tmp_dir = 'tmp' 
 
     os.makedirs(tmp_dir, exist_ok=True)
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)    
     warmstart_filepath = os.path.join(tmp_dir, "warmstart") if warmstart else None
     args.warmstartFilePath = warmstart_filepath
+    
+    if initial_time is None:
+        initial_time = time_limit * 2 / 3
     
     curr_solutions = []
     remain_time = time_limit - (time.time() - start_time)
@@ -227,13 +260,20 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
         n_routes = len(routes)
         iteration += 1
         iter_time = int(min([subproblem_time_limit, remain_time]))
-        # subproblem_max_k = max([n_routes*2//3, subproblem_min_k])
-        subproblem_max_k = subproblem_min_k + 1
+        subproblem_max_k = max([n_routes*2//3, subproblem_min_k])
+        subproblem_max_k = min([subproblem_min_k + 3, n_routes-1])
         subproblem_k = rng.integers(subproblem_max_k - subproblem_min_k) + subproblem_min_k if subproblem_max_k > subproblem_min_k else subproblem_min_k
         
         distribution = routes_distribution.copy()[:n_routes]
         distribution /= sum(distribution)
         # log(f"dist={distribution}")
+        
+        # log(f"request_idx={instance['request_idx']}")
+        
+        if not info['is_static']:
+            instance['map_idx'] = np.arange(len(instance['request_idx']))
+        else:
+            instance['map_idx'] = instance['request_idx']
         
         route_id, sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, distribution=distribution, k=subproblem_k)
         sub_instance_filename = os.path.join(tmp_dir, "subproblem.vrptw")
@@ -243,16 +283,17 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
         if args.verbose:
             log(f"Subprob r={route_id}, k={subproblem_k}. Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
         # log([routes[r] for r in sub_instance_routes])
+
         if warmstart:
-            assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
-            inv_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
+            # assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
+            inv_map = dict(zip(sub_instance['map_idx'], instance['map_idx'][list(range(len(sub_instance['map_idx'])))])   )
             subproblem_warm_start([[inv_map[k] for k in routes[r]] for r in sub_instance_routes], warmstart_filepath)
             
         sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed + iteration, 0, 1.000, 0, args)
         if len(sub_solutions) > 0:
             sub_routes, sub_cost = sub_solutions[-1]
             new_routes = [i for j, i in enumerate(routes) if j not in sub_instance_routes]
-            new_routes += [sub_instance['request_idx'][route] for route in sub_routes]
+            new_routes += [sub_instance['map_idx'][route] for route in sub_routes]
             # log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
             new_cost = tools.validate_static_solution(instance, new_routes, allow_skipped_customers=not info['is_static'])
             improvement = cost / new_cost
@@ -263,14 +304,19 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
                 routes, cost = curr_solutions[-1]
                 yield routes, cost
             if improvement > 1.005:
+                if info['is_static']:
+                    warmstart = True  # okay to be greedy
                 routes_distribution[route_id] *= 100 * (improvement - 1) / 0.01
             elif improvement > 1.0001:
                 routes_distribution[route_id] *= 10 * (improvement - 1) / 0.01
             else:
+                warmstart = False # try to escape local min
                 routes_distribution[route_id] = np.mean(routes_distribution) / 100
             # routes_distribution[route_id] /= 3
         # log(f"dist={routes_distribution[:n_routes]}")
         remain_time = time_limit - (time.time() - start_time)
+        if subproblem_time_limit < 5:
+            subproblem_time_limit *= 1.05
 
     
 

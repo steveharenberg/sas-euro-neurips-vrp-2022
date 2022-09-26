@@ -98,8 +98,8 @@ def run_vroom(instance, tmp_dir, time_limit, explore_level, init_routes=[]):
 
 
 def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp", seed=1, num_sols_ignore=0, min_improvement=0, min_sols=0, args=None):
-    if args.verbose:    
-        print(f"\nRunning HGS", file=sys.__stderr__)
+    # if args.verbose:    
+    #     print(f"\nRunning HGS", file=sys.__stderr__)
     executable = os.path.join('baselines', 'hgs_vrptw', 'genvrp')    
     # On windows, we may have genvrp.exe
     if platform.system() == 'Windows' and os.path.isfile(executable + '.exe'):
@@ -122,6 +122,8 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
 
     nsols = 0
     solutions = []
+    
+    best_cost = float('inf')
     
     # log(' '.join(argList))
     with subprocess.Popen(argList, stdout=subprocess.PIPE, text=True) as p:
@@ -146,10 +148,10 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
                         improvement = float(solutions[-1][1]) / cost
                     if len(solutions) == 0 or cost < solutions[-1][1]:
                         solutions.append((solution, cost))
+                        # if args.verbose:
+                        #     print(f"cost: {cost}, improvement: {improvement}", file=sys.__stderr__)   
                     # Start next solution
                     routes = []
-                    if args.verbose:
-                        print(f"cost: {cost}, improvement: {improvement}", file=sys.__stderr__)   
                     if improvement < min_improvement and nsols > num_sols_ignore and nsols - num_sols_ignore > min_sols:
                         break                 
             elif "EXCEPTION" in line:
@@ -158,12 +160,17 @@ def run_hgs(instance_filename, warmstart_filepath, time_limit=3600, tmp_dir="tmp
     
     return solutions    
 
-def get_subproblem(instance, solution, rng, k = 3, route_id = None):
+def get_subproblem(instance, solution, rng, distribution = None, k = 3, route_id = None):
     n_routes = len(solution)
     if k >= n_routes:
         return instance, list(range(n_routes))
     if route_id is None:
-        route_id = rng.integers(n_routes)
+        if distribution is None:
+            route_id = rng.integers(n_routes)
+        else:
+            route_id = rng.choice(np.arange(n_routes), p=distribution)
+            # log(f"dist={distribution}, r={route_id}")
+            
     # find centroids
     coords = instance['coords']
     centroids = [np.mean(coords[route], axis=0) for route in solution]
@@ -185,7 +192,7 @@ def get_subproblem(instance, solution, rng, k = 3, route_id = None):
     mask[0] = True
     mask[subproblem_clients] = True
     # log(tools.filter_instance(instance, mask))
-    return tools.filter_instance(instance, mask), subproblem_routes
+    return route_id, tools.filter_instance(instance, mask), subproblem_routes
 
 def subproblem_warm_start(routes, warmstart_filepath):
     # yield routes, cost
@@ -213,20 +220,28 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
     routes, cost = curr_solutions[-1]
     yield routes, cost
     
+    routes_distribution = np.ones(1000)
     
     remain_time = time_limit - (time.time() - start_time)
     while remain_time > 1:
+        n_routes = len(routes)
         iteration += 1
         iter_time = int(min([subproblem_time_limit, remain_time]))
-        subproblem_max_k = max([len(routes)//3, subproblem_min_k])
+        # subproblem_max_k = max([n_routes*2//3, subproblem_min_k])
+        subproblem_max_k = subproblem_min_k + 1
         subproblem_k = rng.integers(subproblem_max_k - subproblem_min_k) + subproblem_min_k if subproblem_max_k > subproblem_min_k else subproblem_min_k
-        sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, k=subproblem_k)
+        
+        distribution = routes_distribution.copy()[:n_routes]
+        distribution /= sum(distribution)
+        # log(f"dist={distribution}")
+        
+        route_id, sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, distribution=distribution, k=subproblem_k)
         sub_instance_filename = os.path.join(tmp_dir, "subproblem.vrptw")
         tools.write_vrplib(sub_instance_filename, sub_instance, is_vrptw=True)
         
         # info_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
         if args.verbose:
-            log(f"Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
+            log(f"Subprob r={route_id}, k={subproblem_k}. Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
         # log([routes[r] for r in sub_instance_routes])
         if warmstart:
             assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
@@ -240,12 +255,19 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir="tmp", seed=1, r
             new_routes += [sub_instance['request_idx'][route] for route in sub_routes]
             # log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
             new_cost = tools.validate_static_solution(instance, new_routes, allow_skipped_customers=not info['is_static'])
+            improvement = cost / new_cost
             if args.verbose:
-                log(f"Original cost: {cost}, New cost: {new_cost}, Sub cost: {sub_cost}")
+                log(f"Original cost: {cost}, New cost: {new_cost}, Improvement: {improvement : 0.5f}")
             if new_cost < cost:
                 curr_solutions.append((new_routes, new_cost))
                 routes, cost = curr_solutions[-1]
                 yield routes, cost
+            if improvement > 1.005:
+                routes_distribution[route_id] *= 100 * (improvement - 1) / 0.01
+            else:
+                routes_distribution[route_id] /= 100
+            # routes_distribution[route_id] /= 3
+        # log(f"dist={routes_distribution[:n_routes]}")
         remain_time = time_limit - (time.time() - start_time)
 
     

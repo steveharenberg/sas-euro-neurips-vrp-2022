@@ -190,6 +190,28 @@ def run_baseline(args, env, oracle_solution=None):
             solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
+            
+            dynamic_prune = True
+            debug_printing = False
+        
+            if dynamic_prune and not static_info['is_static']:
+                must_go_mask = epoch_instance_dispatch['must_dispatch']
+                matrix = epoch_instance_dispatch['duration_matrix']
+                n_must_go = sum(must_go_mask)
+                optional = ~must_go_mask
+                mask = np.ones_like(epoch_instance_dispatch['must_dispatch']).astype(np.bool8)
+                optional[0] = False # depot
+                n_optional = sum(optional)
+                epoch_solution_pruned = epoch_solution.copy()
+                for route in epoch_solution:
+                    if optional[route].all():
+                        mask[route] = False
+                        epoch_solution_pruned.remove(route)
+                        if debug_printing:
+                            log(f'Pruning route {route}')
+                epoch_instance_dispatch_pruned = tools._filter_instance(epoch_instance_dispatch, mask)
+                epoch_solution = epoch_solution_pruned
+                cost = tools.validate_static_solution(epoch_instance_dispatch, epoch_solution, allow_skipped_customers=True)
 
             # Map HGS solution to indices of corresponding requests
             epoch_solution = [epoch_instance_dispatch['request_idx'][route] for route in epoch_solution]

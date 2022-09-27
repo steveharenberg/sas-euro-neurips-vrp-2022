@@ -87,7 +87,7 @@ def _angle(observation: State,
 
 def _fdist(observation: State,
             rng: np.random.Generator):
-    return _dist(observation, rng, fixed_pct=0.25)
+    return _dist(observation, rng, fixed_pct=0.50)
 
 def _rdist(observation: State,
             rng: np.random.Generator):
@@ -139,10 +139,8 @@ def _dist(observation: State,
 
 
 def _greedy(observation: State, rng: np.random.Generator):
-    return {
-        **observation,
-        'must_dispatch': np.ones_like(observation['must_dispatch']).astype(np.bool8)
-    }
+    mask= np.ones_like(observation['must_dispatch']).astype(np.bool8)
+    return _filter_instance(observation, mask)
 
 
 def _lazy(observation: State, rng: np.random.Generator):

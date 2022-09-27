@@ -210,19 +210,24 @@ def subproblem_warm_start(routes, warmstart_filepath):
         with open(warmstart_filepath, 'w') as fout:
             fout.write(routesToStr(routes) + "\n")
 
-def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rng=None, subproblem_min_k=5, subproblem_time_limit=2, initial_time=None, warmstart=True, args=None):
-    start_time = time.time()
-    
+def trivial_solution(instance):
     if instance['coords'].shape[0] <= 1:
-        yield [], 0
-        # time_cost.append((time.time()-start_time, 0))
-        return
+        return [], 0
 
     if instance['coords'].shape[0] <= 2:
         solution = [[1]]
         cost = tools.validate_static_solution(instance, solution)
-        yield solution, cost
-        # time_cost.append((time.time()-start_time, cost))
+        return solution, cost
+    return None, None
+
+def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rng=None, subproblem_min_k=5, subproblem_time_limit=2, initial_time=None, warmstart=True, args=None):
+    start_time = time.time()
+    
+    debug_printing = False
+    
+    triv, triv_cost = trivial_solution(instance)
+    if triv is not None:
+        yield triv, triv_cost
         return
     
     
@@ -253,6 +258,11 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rn
     routes, cost = curr_solutions[-1]
     yield routes, cost
     
+    if not info['is_static']:
+        instance['map_idx'] = np.arange(len(instance['request_idx']))
+    else:
+        instance['map_idx'] = instance['request_idx']
+        
     routes_distribution = np.ones(1000)
     
     remain_time = time_limit - (time.time() - start_time)
@@ -270,34 +280,65 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rn
         
         # log(f"request_idx={instance['request_idx']}")
         
-        if not info['is_static']:
-            instance['map_idx'] = np.arange(len(instance['request_idx']))
-        else:
-            instance['map_idx'] = instance['request_idx']
-        
         route_id, sub_instance, sub_instance_routes = get_subproblem(instance, routes, rng, distribution=distribution, k=subproblem_k)
+        
+        dynamic_prune = True
+        
+        if dynamic_prune and not info['is_static']:
+            inv_map = dict(zip(sub_instance['map_idx'], instance['map_idx'][list(range(len(sub_instance['map_idx'])))])   )
+            must_go_mask = sub_instance['must_dispatch']
+            matrix = sub_instance['duration_matrix']
+            n_must_go = sum(must_go_mask)
+            optional = ~must_go_mask
+            mask = np.ones_like(sub_instance['must_dispatch']).astype(np.bool8)
+            optional[0] = False # depot
+            n_optional = sum(optional)
+            sub_instance_routes_pruned = sub_instance_routes.copy()
+            for r in sub_instance_routes:
+                route = [inv_map[k] for k in routes[r]]
+                if optional[route].all():
+                    mask[route] = False
+                    sub_instance_routes_pruned.remove(r)
+                    if debug_printing:
+                        log(f'{optional[route]}')
+                        log(f'Pruning route {route}')
+            sub_instance = tools.filter_instance(sub_instance, mask)
+            warmstart = False
+        
         sub_instance_filename = os.path.join(tmp_dir, "subproblem.vrptw")
         tools.write_vrplib(sub_instance_filename, sub_instance, is_vrptw=True)
         
         # info_map = dict(zip(sub_instance['request_idx'], instance['request_idx'][list(range(len(sub_instance['request_idx'])))])   )
-        if args.verbose:
+        if debug_printing:
             log(f"Subprob r={route_id}, k={subproblem_k}. Running hgs for {iter_time} seconds. Remaining time: {remain_time} seconds.")
         # log([routes[r] for r in sub_instance_routes])
 
         if warmstart:
             # assert info['is_static'], "subproblem warmstart not yet supported for dynamic"
             inv_map = dict(zip(sub_instance['map_idx'], instance['map_idx'][list(range(len(sub_instance['map_idx'])))])   )
-            subproblem_warm_start([[inv_map[k] for k in routes[r]] for r in sub_instance_routes], warmstart_filepath)
+            sub_instance_route_indices = sub_instance_routes_pruned if dynamic_prune else sub_instance_routes
+            subproblem_warm_start([[inv_map[k] for k in routes[r]] for r in sub_instance_route_indices], warmstart_filepath)
             
-        sub_solutions = run_hgs(sub_instance_filename, warmstart_filepath, iter_time, tmp_dir, seed + iteration, 0, 1.000, 0, args)
+        triv = None
+        triv, triv_cost = trivial_solution(sub_instance)
+        if triv is not None:
+            sub_solutions = [(triv, triv_cost)]
+            yield triv, triv_cost
+        else:
+            sub_solutions = run_hgs(sub_instance_filename,
+                                    warmstart_filepath if warmstart else None, 
+                                    iter_time, tmp_dir, seed + iteration, 0, 1.000, 0, args)
+            if debug_printing:
+                log(f"Found {len(sub_solutions)} solutions.")
         if len(sub_solutions) > 0:
             sub_routes, sub_cost = sub_solutions[-1]
             new_routes = [i for j, i in enumerate(routes) if j not in sub_instance_routes]
             new_routes += [sub_instance['map_idx'][route] for route in sub_routes]
-            # log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
+            if debug_printing:
+                log(f"Original sub: {[routes[r] for r in sub_instance_routes]}, New sub sol: {sub_routes}")
             new_cost = tools.validate_static_solution(instance, new_routes, allow_skipped_customers=not info['is_static'])
             improvement = cost / new_cost
-            if args.verbose:
+            if debug_printing:
                 log(f"Original cost: {cost}, New cost: {new_cost}, Improvement: {improvement : 0.5f}")
             if new_cost < cost:
                 curr_solutions.append((new_routes, new_cost))
@@ -314,6 +355,8 @@ def solve_static_vrptw(instance, info, time_limit=3600, tmp_dir=None, seed=1, rn
                 routes_distribution[route_id] = np.mean(routes_distribution) / 100
             # routes_distribution[route_id] /= 3
         # log(f"dist={routes_distribution[:n_routes]}")
+        if triv is not None:
+            break
         remain_time = time_limit - (time.time() - start_time)
         if subproblem_time_limit < 5:
             subproblem_time_limit *= 1.05

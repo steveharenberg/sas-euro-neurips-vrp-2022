@@ -71,7 +71,7 @@ def _angle(observation: State,
 
 def _fdist(observation: State,
             rng: np.random.Generator):
-    return _dist(observation, rng, fixed_pct=0.25)
+    return _dist(observation, rng, fixed_pct=0.50)
 
 def _rdist(observation: State,
             rng: np.random.Generator):

@@ -31,7 +31,7 @@ esac
 epochTime=0
 
 PREFIX="quick${instanceSize}"
-DYNAMICFLAG=""
+DYNAMICFLAG="D"
 case $DYNAMICFLAG in
  D)
     staticFlag=""

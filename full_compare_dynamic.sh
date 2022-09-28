@@ -1,6 +1,6 @@
 #!/bin/bash
 
-instanceSize=25
+instanceSize=250
 case $instanceSize in
  S)
     instanceList=instances_8_small.txt
@@ -22,6 +22,16 @@ case $instanceSize in
     nw=7
     ;;
 
+  249)
+    instanceList=instances_249.txt
+    nw=8
+    ;;
+
+  250)
+    instanceList=instances_250.txt
+    nw=8
+    ;;
+
   *)
     echo "Bad instanceSize option."
     exit
@@ -30,7 +40,7 @@ esac
 
 epochTime=0
 
-PREFIX="quick${instanceSize}"
+PREFIX="full${instanceSize}"
 DYNAMICFLAG="D"
 case $DYNAMICFLAG in
  D)
@@ -42,9 +52,9 @@ case $DYNAMICFLAG in
     ;;
 esac
 
-
-for SOLVER_SEED in 1 #2 3 4 5
-   do
+SOLVER_SEED=212165
+for INSTANCE_SEED in $1
+do
    # EXTRA_ARGS="-t ${PREFIX}_baseline3"
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime -s -d $SOLVER_SEED $EXTRA_ARGS
    # EXTRA_ARGS="-t ${PREFIX}_manual1 --fractionGeneratedRandomly 0"
@@ -56,7 +66,7 @@ for SOLVER_SEED in 1 #2 3 4 5
    # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_manual1 --randomGenerator 1"
   #  EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_subproblem1 --solver_seed 212165  --randomGenerator 3"
    EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_subproblem1 --solver_seed 212165  --randomGenerator 3 --strategy fdist"
-   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -d $SOLVER_SEED $EXTRA_ARGS
+   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -a $INSTANCE_SEED -d $SOLVER_SEED $EXTRA_ARGS
 done
 echo "Finished. Tabulating results..."
 

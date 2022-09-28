@@ -3,7 +3,7 @@
 PASSTHRU_ARGS="${@}"
 
 
-SHORT=i:,t:,n:,e:,s,d:,h
+SHORT=i:,t:,n:,e:,s,d:,a:,h
 LONG=instanceList:,resultTag:,numWorkerProcesses:,epochTime:,static,solverSeed:,help
 OPTS=$(getopt -q --alternative --name benchmark_run --options $SHORT --longoptions $LONG -- "$@")
 eval set -- "$OPTS"
@@ -30,6 +30,9 @@ staticFlag=""
 seedParam=""
 seedPrefix=""
 solverSeed=""
+instanceSeedParam=""
+instanceSeedPrefix=""
+instanceSeed=""
 
 # Controller Parameters
 epochTime=0 # time limit for one epoch 
@@ -44,6 +47,8 @@ resultTag=$2 ; shift 2 ;;
 numWorkerProcesses=$2 ; shift 2 ;;
 -e|--epochTime)
 epochTime=$2 ; shift 2 ;;
+-a|--instanceSeed)
+instanceSeed=$2; instanceSeedParam="--instance_seed"; instanceSeedPrefix="i${instanceSeed}_"; shift 2 ;;
 -d|--solverSeed)
 solverSeed=$2; seedParam="--solver_seed"; seedPrefix="s${solverSeed}_"; shift 2 ;;
 -s|--static)
@@ -96,8 +101,8 @@ for i in $(seq 0 $numWorkerProcesses $num_instances); do
     for j in $(seq 0 $numWorkerProcesses); do
         let "idx = $i + $j"
         if [ $idx -lt $num_instances ]; then
-            fname="${resultDir}${resultSubDir}${seedPrefix}${instances[$idx]}"
-            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} -- python solver.py ${seedParam} $solverSeed --strategy ${strategy} ${verboseFlag} $PASSTHRU_ARGS > $fname & 
+            fname="${resultDir}${resultSubDir}${instanceSeedPrefix}${seedPrefix}${instances[$idx]}"
+            python controller.py --instance ${instanceDir}${instances[$idx]} --epoch_tlim $epochTime ${staticFlag} ${instanceSeedParam} $instanceSeed -- python solver.py ${seedParam} $solverSeed --strategy ${strategy} ${verboseFlag} $PASSTHRU_ARGS > $fname & 
         fi
     done
     wait

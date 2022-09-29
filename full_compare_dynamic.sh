@@ -68,8 +68,7 @@ do
    EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_subproblem1 --solver_seed 212165  --randomGenerator 3 --strategy fdist"
    ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -a $INSTANCE_SEED -d $SOLVER_SEED $EXTRA_ARGS
 done
-echo "Finished. Tabulating results..."
 
-# bash tabulate_results.sh ${PREFIX} > "results/quick-results-${instanceSize}.tsv"
-bash tabulate_results.sh ${DYNAMICFLAG}${PREFIX} > "results/${DYNAMICFLAG}quick-results-${instanceSize}.tsv"
+-echo "Run this after all seeds complete"
+-echo "bash tabulate_results.sh ${DYNAMICFLAG}${PREFIX}_ > results/${DYNAMICFLAG}full-results-${instanceSize}.tsv"
 

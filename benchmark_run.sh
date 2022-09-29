@@ -3,7 +3,7 @@
 PASSTHRU_ARGS="${@}"
 
 
-SHORT=i:,t:,n:,e:,s,d:,h
+SHORT=i:,t:,n:,e:,s,d:,a:,h
 LONG=instanceList:,resultTag:,numWorkerProcesses:,epochTime:,static,solverSeed:,help
 OPTS=$(getopt -q --alternative --name benchmark_run --options $SHORT --longoptions $LONG -- "$@")
 eval set -- "$OPTS"

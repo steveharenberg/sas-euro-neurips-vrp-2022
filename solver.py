@@ -191,7 +191,7 @@ def run_baseline(args, env, oracle_solution=None):
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
             
-            dynamic_prune = True
+            dynamic_prune = 'pruneRoutes' in args and args.pruneRoutes
             debug_printing = False
         
             if dynamic_prune and not static_info['is_static']:
@@ -290,6 +290,7 @@ if __name__ == "__main__":
     parser.add_argument("--randomGenerator", type=int)
     
     parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
+    parser.add_argument("--pruneRoutes", action='store_true', help="Enable to prune routes consisting of optional clients.")
 
     args, unknown = parser.parse_known_args()
 

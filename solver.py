@@ -182,7 +182,11 @@ def run_baseline(args, env, oracle_solution=None):
         else:
             # Select the requests to dispatch using the strategy
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
-            epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
+            if 'thresholdSchedule' in args and args.thresholdSchedule is not None:
+                threshold_schedule = [float(x) for x in args.thresholdSchedule.split(',')]
+                epoch_instance_dispatch = STRATEGIES[args.strategy]({**epoch_instance, 'observation': observation, 'static_info': static_info}, rng, threshold_schedule)
+            else:
+                epoch_instance_dispatch = STRATEGIES[args.strategy]({**epoch_instance, 'observation': observation, 'static_info': static_info}, rng)
 
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
@@ -291,6 +295,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
     parser.add_argument("--pruneRoutes", action='store_true', help="Enable to prune routes consisting of optional clients.")
+    parser.add_argument("--thresholdSchedule", type=str)
 
     args, unknown = parser.parse_known_args()
 

@@ -48,6 +48,9 @@ def _filter_instance(observation: State, mask: np.ndarray):
     res = {}
 
     for key, value in observation.items():
+        if key in ('observation', 'static_info'):
+            continue
+        
         if key == 'capacity':
             res[key] = value
             continue

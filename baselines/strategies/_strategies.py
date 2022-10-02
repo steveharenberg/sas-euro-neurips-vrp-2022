@@ -70,8 +70,14 @@ def _angle(observation: State,
     return _filter_instance(observation, mask)
 
 def _fdist(observation: State,
-            rng: np.random.Generator):
-    return _dist(observation, rng, fixed_pct=0.50)
+            rng: np.random.Generator, fixed_pct_schedule=[]):
+    epoch_instance = observation
+    observation, static_info = epoch_instance.pop('observation'), epoch_instance.pop('static_info')
+    epochs_remaining = static_info['end_epoch'] - observation['current_epoch']
+    if epochs_remaining >= len(fixed_pct_schedule):
+        return _dist(epoch_instance, rng, fixed_pct=0.50)
+    else:
+        return _dist(epoch_instance, rng, fixed_pct=fixed_pct_schedule[epochs_remaining])
 
 def _rdist(observation: State,
             rng: np.random.Generator):

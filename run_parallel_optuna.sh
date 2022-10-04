@@ -6,6 +6,6 @@ num_instances=${#instances[@]}
 
 for i in $(seq 1 $nw)
 do
-   python tune_fixed.py &
+   python tune_thresholds.py &
 done
 wait

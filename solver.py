@@ -143,14 +143,15 @@ def run_oracle(args, env):
 
 
 def run_baseline(args, env, oracle_solution=None):
-
-    rng = np.random.default_rng(args.solver_seed)
-
-    total_reward = 0
-    done = False
     # Note: info contains additional info that can be used by your solver
     observation, static_info = env.reset()
     epoch_tlim = static_info['epoch_tlim']
+
+    solver_seed = args.solver_seed if static_info['is_static'] else args.solver_seed_dynamic
+    rng = np.random.default_rng(solver_seed)
+
+    total_reward = 0
+    done = False
     # Use contest qualification phase time limits
     if epoch_tlim == 0:
         if static_info['start_epoch'] == static_info['end_epoch']:
@@ -187,7 +188,7 @@ def run_baseline(args, env, oracle_solution=None):
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
             # we will exactly use the solver_seed whereas in the dynamic problem randomness is in the instance
-            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
+            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=solver_seed, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
             
@@ -251,7 +252,8 @@ if __name__ == "__main__":
     # Note: these arguments are only for convenience during development, during testing you should use controller.py
     parser.add_argument("--instance", help="Instance to solve")
     parser.add_argument("--instance_seed", type=int, default=1, help="Seed to use for the dynamic instance")
-    parser.add_argument("--solver_seed", type=int, default=1, help="Seed to use for the solver")
+    parser.add_argument("--solver_seed", type=int, default=1, help="Seed to use for the static solver")
+    parser.add_argument("--solver_seed_dynamic", type=int, default=1, help="Seed to use for the dynamic solver")
     parser.add_argument("--static", action='store_true', help="Add this flag to solve the static variant of the problem (by default dynamic)")
     parser.add_argument("--epoch_tlim", type=int, default=120, help="Time limit per epoch")
     parser.add_argument("--tmp_dir", type=str, default=None, help="Provide a specific directory to use as tmp directory (useful for debugging)")

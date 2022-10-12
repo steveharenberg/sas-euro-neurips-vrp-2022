@@ -42,6 +42,21 @@ def cleanup_tmp_dir(tmp_dir):
             os.remove(filepath)
     assert len(os.listdir(tmp_dir)) == 0, "Unexpected files in tmp_dir"    
     os.rmdir(tmp_dir)
+
+def _feature_vector(observation: State):
+    dimension = len(observation['must_dispatch'])
+    capacity = observation['capacity']
+    distancesToDepot = observation['duration_matrix'][1:,0]
+    distanceToDepotCV = np.std(distancesToDepot) / np.mean(distancesToDepot)
+    demands = observation['demands'][1:]
+    demandCV = np.std(demands) / np.mean(demands)
+    timeWindows = observation['time_windows'][1:,1] - observation['time_windows'][1:,0]
+    timeWindowCV = np.std(timeWindows) / np.mean(timeWindows)
+    serviceTimes = observation['service_times'][1:]
+    serviceTimeCV = np.std(serviceTimes) / np.mean(serviceTimes)
+    demandMeanOverCapacity = np.mean(demands) / capacity
+    
+    return [dimension, capacity, distanceToDepotCV, demandCV, timeWindowCV, serviceTimeCV, demandMeanOverCapacity]
     
     
 def _filter_instance(observation: State, mask: np.ndarray):

@@ -44,7 +44,7 @@ def cleanup_tmp_dir(tmp_dir):
     os.rmdir(tmp_dir)
 
 def _feature_vector(observation: State):
-    dimension = len(observation['must_dispatch'])
+    dimension = len(observation['demands'])
     capacity = observation['capacity']
     distancesToDepot = observation['duration_matrix'][1:,0]
     distanceToDepotCV = np.std(distancesToDepot) / np.mean(distancesToDepot)

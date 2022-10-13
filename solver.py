@@ -141,7 +141,6 @@ def run_oracle(args, env):
     assert -total_reward == oracle_cost, "Oracle solution does not match cost according to environment"
     return total_reward
 
-
 def run_baseline(args, env, oracle_solution=None):
 
     rng = np.random.default_rng(args.solver_seed)

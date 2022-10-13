@@ -2,6 +2,8 @@ import numpy as np
 from environment import State
 import math
 from itertools import compress
+from sklearn.cluster import DBSCAN
+from collections import Counter
 import sys
 
 
@@ -138,6 +140,58 @@ def _dist(observation: State,
     return _filter_instance(observation, mask)
 
 
+def _clustering(observation: State,
+                rng: np.random.Generator):
+    '''Simple heuristic dispatching a fraction of clients based on clustering.'''
+    
+    matrix = observation["duration_matrix"]
+    min_dispatch = int(len(matrix) / 3) # TODO: should be optional
+
+    must_go = np.copy(observation['must_dispatch'])
+    n_must_go = sum(must_go)
+
+    optional = ~must_go
+    optional[0] = False # depot
+    n_optional = sum(optional)
+        
+    is_depot = np.copy(observation['is_depot'])
+    candidates = 1 - must_go - is_depot
+    assert is_depot[0], "Assuming depot has index 0!"
+
+    customers_duration = matrix[1:,1:]
+    clustering = DBSCAN(eps=500, metric="precomputed").fit(customers_duration).labels_  # TODO: select better eps
+    clustering = np.concatenate(([-1], clustering))  # add depot back in (as outlier)
+
+    # All customers in clusters with must_gos are serviced
+    must_go_clusters = [x for x in clustering[must_go] if x >= 0]
+    optional_go = [i for i in range(len(clustering)) if clustering[i] in must_go_clusters]
+
+    # Put every must_go into cluster with nearest member
+    must_outliers = [i for i in range(len(clustering)) if must_go[i] and clustering[i] < 0]
+    for i in must_outliers:
+        dist = matrix[i]
+        neighbors = [(j,dist[j]) for j in range(len(dist)) if i!=j and clustering[j]>=0]
+        best = min(neighbors, key=lambda x: x[1])
+        clustering[i] = best[0]
+
+    # Also service customers outside of must-go clusters, if we are below min_dispatch threshold
+    cluster_counts = Counter(clustering)
+    num_go = sum([cluster_counts[x] for x in must_go_clusters])
+    for c in sorted(cluster_counts.items(), key=lambda x: x[1], reverse=True):
+        if num_go >= min_dispatch:
+            break
+        if c[0] in must_go_clusters or c[0] == -1:
+            continue
+        num_go += c[1]
+        optional_go += [i for i in range(len(clustering)) if clustering[i]==c[0]]
+
+    final_go = False | must_go
+    final_go[0] = True
+    final_go[optional_go] = True
+
+    return _filter_instance(observation, final_go)
+
+
 def _greedy(observation: State, rng: np.random.Generator):
     return {
         **observation,
@@ -165,6 +219,7 @@ STRATEGIES = dict(
     dist=_dist,
     fdist=_fdist,
     rdist=_rdist,
+    clustering=_clustering,
     greedy=_greedy,
     lazy=_lazy,
     random=_random

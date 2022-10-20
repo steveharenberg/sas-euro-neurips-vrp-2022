@@ -3,10 +3,12 @@ import argparse
 import subprocess
 import sys
 import os
+import json
 import uuid
 import platform
 import numpy as np
 import time
+import copy
 
 import tools
 from environment import VRPEnvironment, ControllerEnvironment
@@ -46,6 +48,7 @@ ALL_HGS_ARGS = [
     "randomGenerator",
 ]
 
+
 def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=None):
     start_time = time.time()
     time_cost = [] # stores all solution costs and the time at which they were found
@@ -66,6 +69,8 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     os.makedirs(tmp_dir, exist_ok=True)
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)
+
+    warmstart_filepath = os.path.join(tmp_dir, "warmstart")
     
     executable = os.path.join('baselines', 'hgs_vrptw', 'genvrp')
     # On windows, we may have genvrp.exe
@@ -79,6 +84,9 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 executable, instance_filename, str(hgs_max_time), 
                 '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
             ]
+    
+    if os.path.isfile(warmstart_filepath):
+        argList += ['-warmstartFilePath', warmstart_filepath]
     
     # Add all the tunable HGS args
     if args is not None:
@@ -117,6 +125,9 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         for row in time_cost:
             log(f"{row[0]:0.3f}\t{row[1]}")
 
+  
+        
+
 def run_oracle(args, env):
     # Oracle strategy which looks ahead, this is NOT a feasible strategy but gives a 'bound' on the performance
     # Bound written with quotes because the solution is not optimal so a better solution may exist
@@ -143,7 +154,6 @@ def run_oracle(args, env):
 
 
 def run_baseline(args, env, oracle_solution=None):
-
     rng = np.random.default_rng(args.solver_seed)
 
     total_reward = 0
@@ -156,9 +166,9 @@ def run_baseline(args, env, oracle_solution=None):
         if static_info['start_epoch'] == static_info['end_epoch']:
             epoch_instance = observation['epoch_instance']
             n_cust = len(epoch_instance['request_idx']) - 1
-            if n_cust <= 300:
+            if n_cust < 300:
                 args.epoch_tlim = 3*60
-            elif n_cust <= 500:
+            elif n_cust < 500:
                 args.epoch_tlim = 5*60
             else:
                 args.epoch_tlim = 8*60
@@ -166,6 +176,7 @@ def run_baseline(args, env, oracle_solution=None):
             args.epoch_tlim = 1*60
     num_requests_postponed = 0
     while not done:
+        os.makedirs(args.tmp_dir, exist_ok=True)
         epoch_instance = observation['epoch_instance']
 
         if args.verbose:
@@ -180,14 +191,21 @@ def run_baseline(args, env, oracle_solution=None):
             epoch_solution = [route for route in oracle_solution if len(request_idx.intersection(route)) == len(route)]
             cost = tools.validate_dynamic_epoch_solution(epoch_instance, epoch_solution)
         else:
+            start_time = time.time()
             # Select the requests to dispatch using the strategy
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
-            epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
+            if args.strategy == "vroom":
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, args, num_new_requests, epoch_tlim*0.5)
+            elif args.strategy == "test":
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, num_new_requests)
+            else:
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
 
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
             # we will exactly use the solver_seed whereas in the dynamic problem randomness is in the instance
-            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=epoch_tlim, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
+            remain_time = epoch_tlim-int(time.time()-start_time)
+            solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=remain_time, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
 
@@ -265,9 +283,16 @@ if __name__ == "__main__":
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
     parser.add_argument("--useDynamicParameters", type=int)
-    parser.add_argument("--randomGenerator", type=int)
-    
-    parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
+    # vroom warmstart
+    parser.add_argument("--exploreLevel", type=int, default=0)
+    parser.add_argument("--warmstartTimeFraction", type=float, default=0.0)
+    parser.add_argument("--maxWarmstartTime", type=float, default=float('inf'))
+    # hgs warmstart
+    parser.add_argument("--nbHgsWarmstarts", type=int, default=0)
+    parser.add_argument("--hgsWarmstartTime", type=float, default=2)
+    parser.add_argument("--hgsWarmstartMode", choices=['BEST', 'BEST_WORST', 'ALL'], default='BEST')
+    # other
+    parser.add_argument("--logTimeCost", action='store_true')
 
     args, unknown = parser.parse_known_args()
 

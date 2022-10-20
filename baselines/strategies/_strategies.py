@@ -2,7 +2,9 @@ import numpy as np
 from environment import State
 import math
 from itertools import compress
-import sys
+import os, sys
+import tools
+import time
 
 
 def _filter_instance(observation: State, mask: np.ndarray):
@@ -158,6 +160,101 @@ def _random(observation: State, rng: np.random.Generator):
     return _filter_instance(observation, mask)
 
 
+def _test(observation: State, rng: np.random.Generator, num_new_requests):
+    mask = np.copy(observation['must_dispatch'])
+    nmustgos = sum(mask)
+    if nmustgos >= num_new_requests:
+        return {
+            **observation,
+            'must_dispatch': np.ones_like(observation['must_dispatch']).astype(np.bool8)
+        }        
+
+    mask[0] = True
+    return _filter_instance(observation, mask)    
+
+
+def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    start_time = time.time()
+    
+    mask = np.copy(observation['must_dispatch'])
+    totcust = len(observation['must_dispatch']) - 1
+
+    timewi = observation['time_windows'][1:,1]
+    priorities = np.zeros((len(mask),1))
+    # if sum(~mask[1:]) > 0:
+    #     mintime = timewi[~mask[1:]].min()
+    #     maxtime = timewi[~mask[1:]].max()
+    #     if maxtime > mintime:
+    #         priorities = (10 - (timewi - mintime) / (maxtime - mintime) * 10).astype(np.int32)
+    #         priorities = np.concatenate(([100], priorities)) # add in priority for depot to make indexing correct
+    priorities[mask] = 100 # force must_dispatch to highest priority
+
+    mustgos = set([x for x in range(len(mask)) if mask[x]])
+    if len(mustgos) == 0:
+        return _lazy(observation, rng)
+
+    # warmstart_filepath = os.path.join(args.tmp_dir, "warmstart")
+    # if os.path.isfile(warmstart_filepath):
+    #     os.remove(warmstart_filepath)        
+
+    # determine nvehicles to satisfy must-gos
+    mask[0] = True
+    must_instance = _filter_instance(observation, mask)
+    solutions = tools.run_vroom(must_instance, args.tmp_dir, time_limit, explore_level=0)
+    nvehicles = len(solutions[-1])
+
+    if len(mustgos) >= 0.33*num_new_requests or totcust / num_new_requests > 2:
+        nvehicles *= 4
+
+    # quickly check rough number of customers that nvehicles routes to
+    # time_remain = int(time_limit - (time.time()-start_time))
+    # solutions = tools.run_vroom(observation, args.tmp_dir, time_remain, explore_level=0, nvehicles=nvehicles)
+    # customers = set([n for route in solutions[0][0] for n in route])
+
+    # if CUSTGOAL > len(customers):
+    #     nvehicles = int(CUSTGOAL * nvehicles / len(customers))
+
+    # deeper routing to determine final customers
+    time_remain = int(time_limit - (time.time()-start_time))
+    solutions = tools.run_vroom(observation, args.tmp_dir, time_remain, args.exploreLevel, nvehicles=nvehicles, priorities=priorities)
+    if len(solutions) == 0:
+        return _lazy(observation, rng)
+
+    # take solution that uses the most must-gos at the best
+    # def mustgo_sortkey(sol):
+    #     routes = sol[0]
+    #     cost = sol[1]
+    #     flat = [n for route in sol[0] for n in route]
+    #     num_mustgos = len(set(flat)&mustgos)
+    #     return (-1*num_mustgos, cost)
+    # solutions.sort(key=mustgo_sortkey)
+
+    customers = set([n for route in solutions[0][0] for n in route])
+    # print("", file=sys.__stderr__)
+    # print(len(customers & mustgos), len(mustgos), file=sys.__stderr__)
+    # exit()
+    tovisit = list(customers | mustgos)
+    
+    # print(customers, len(customers & mustgos), file=sys.__stderr__)
+
+    mask[tovisit] = True
+    instance = _filter_instance(observation, mask)
+
+    # TODO: remap ids so that we can warmstart
+    # OR:
+    # run vroom on new instance to warmstart for hgs
+    # must be run on filtered instance otherwise numbers are off
+    # if time.time() - start_time > 1:
+    #     solutions = tools.run_vroom(instance, args.tmp_dir, time_limit, args.exploreLevel)
+
+    #     warmstart_filepath = os.path.join(args.tmp_dir, "warmstart")
+    #     with open(warmstart_filepath, 'w') as fout:
+    #         for routes, cost in solutions:
+    #             fout.write(tools.routesToStr(routes) + "\n")    
+    
+    return instance
+
+
 STRATEGIES = dict(
     angle=_angle,
     fangle=_fangle,
@@ -167,5 +264,7 @@ STRATEGIES = dict(
     rdist=_rdist,
     greedy=_greedy,
     lazy=_lazy,
-    random=_random
+    random=_random,
+    vroom=_vroom,
+    test=_test
 )

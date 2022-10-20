@@ -1,6 +1,8 @@
 import json
 import os
 import numpy as np
+import time
+import subprocess
 
 # https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
 class NumpyJSONEncoder(json.JSONEncoder):
@@ -39,9 +41,28 @@ def cleanup_tmp_dir(tmp_dir):
         filepath = os.path.join(tmp_dir, filename)
         if 'problem.vrptw' in filename and os.path.isfile(filepath):
             os.remove(filepath)
+        if 'problem_vroom.json' in filename and os.path.isfile(filepath):
+            os.remove(filepath)            
+        if 'problem.json' in filename and os.path.isfile(filepath):
+            os.remove(filepath)
+        if 'warmstart' in filename and os.path.isfile(filepath):
+            os.remove(filepath)            
     assert len(os.listdir(tmp_dir)) == 0, "Unexpected files in tmp_dir"    
     os.rmdir(tmp_dir)
 
+def which(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None
 
 def compute_solution_driving_time(instance, solution):
     return sum([
@@ -317,3 +338,196 @@ def write_vrplib(filename, instance, name="problem", euclidean=False, is_vrptw=T
                 f.write("\n")
             
         f.write("EOF\n")
+
+
+import math
+
+# Generate a json-formatted problem from a TSPTW/VRPTW file.
+
+# Those benchmarks use double precision for matrix costs (and input
+# timings), and results are usually reported with 2 decimal places. As
+# a workaround, we multiply all costs/timings by CUSTOM_PRECISION
+# before performing the usual integer rounding. Comparisons in
+# benchmarks/compare_to_BKS.py are adjusted accordingly.
+# CUSTOM_PRECISION = 1000
+CUSTOM_PRECISION = 1
+
+line_no = 0
+
+# TSPLIB canonic rounding.
+def nint(x):
+    return int(x + 0.5)
+
+def euc_2D(c1, c2, PRECISION=1):
+    xd = c1[0] - c2[0]
+    yd = c1[1] - c2[1]
+    return nint(PRECISION * math.sqrt(xd * xd + yd * yd))
+
+# Compute matrix based on ordered list of coordinates.
+def get_matrix(coords, PRECISION=1):
+    N = len(coords)
+    matrix = [[0 for i in range(N)] for j in range(N)]
+
+    for i in range(N):
+        for j in range(i + 1, N):
+            value = euc_2D(coords[i], coords[j], PRECISION)
+            matrix[i][j] = value
+            matrix[j][i] = value
+
+    return matrix
+
+def populate_meta(instance, meta, name="problem"):
+    meta['NAME'] = name
+    meta['CAPACITY'] = instance['capacity']
+    meta['JOBS'] = len(instance['service_times'])
+
+
+def populate_jobs(instance, jobs, priorities): 
+    demands = instance['demands']
+    is_depot = instance['is_depot']
+    coords = instance['coords']
+    time_windows = instance['time_windows']
+    service_t = instance['service_times']
+    for i in range(len(service_t)):
+        priority = 0
+        if instance["must_dispatch"][i]:
+            priority = 100
+        if priorities is not None:
+            priority = priorities[i]
+        if is_depot[i]:
+            continue
+        jobs.append(
+            {
+                "id": int(i),
+                "location": coords[i].tolist(),
+                "location_index": int(i),
+                "delivery": [int(demands[i])],
+                "priority": int(priority),
+                "time_windows": [
+                    [
+                        CUSTOM_PRECISION * int(time_windows[i][0]),
+                        CUSTOM_PRECISION * int(time_windows[i][1]),
+                    ]
+                ],
+                "service": CUSTOM_PRECISION * int(service_t[i]),
+            }
+        )
+
+def populate_vrptw(instance, name="problem", steps=None, nvehicles=None, priorities=None): 
+    meta = {}
+    coords = instance['coords']
+    jobs = []
+    populate_jobs(instance, jobs, priorities)
+    populate_meta(instance, meta, name=name)
+
+    duration_matrix = instance['duration_matrix']
+    if duration_matrix is None:
+        duration_matrix = get_matrix(coords, CUSTOM_PRECISION)
+
+
+    total_demand = 0
+    time_min = ~0
+    time_max = 0
+    for n in range(len(jobs)):
+        total_demand += jobs[n]["delivery"][0]
+        for t in jobs[n]["time_windows"]:
+            if t[0] - duration_matrix[0][n] < time_min:
+                time_min = t[0] - duration_matrix[0][n]
+            if t[1] + duration_matrix[n][0] > time_max:
+                time_max = t[1] + duration_matrix[n][0]
+    if time_min < 0:
+        time_min = 0
+    if "CAPACITY" not in meta:
+        meta["CAPACITY"] = total_demand
+    meta["JOBS"] = len(jobs)
+    if "VEHICLES" not in meta:
+        meta["VEHICLES"] = len(jobs) if nvehicles is None else nvehicles
+    meta["TIME WINDOW"] = [int(time_min), int(time_max)]
+
+    n_vehicles = meta["VEHICLES"]
+    capacity = meta["CAPACITY"]
+    # use TW for vehicle (first points entry) when explicitely defined
+    # tw = j["time_windows"]
+    # if [tw[0][1] != 0]:
+    #     time_min = tw[0][0]
+    #     time_max = tw[0][1]
+
+    vehicles = []
+
+    assert(steps is None or len(steps) <= n_vehicles)
+    for n in range(n_vehicles):
+        route = []
+        if steps is not None and n < len(steps):
+            route = [{"type":"job", "id":i} for i in steps[n]]     
+        vehicles.append(
+            {
+                "id": int(n),
+                "start": coords[0].tolist(),
+                "start_index": 0,
+                "end": coords[0].tolist(),
+                "end_index": 0,
+                "capacity": [capacity],
+                "time_window": [int(x) for x in instance['time_windows'][0]],
+                "steps": route,
+            }
+        )
+
+    return {
+        "meta": meta,
+        "vehicles": vehicles,
+        "jobs": jobs,
+        "matrices": {"car": {"durations": duration_matrix.tolist()}},
+    }
+
+
+def write_json(filename, instance, name="problem", steps=None, nvehicles=None, priorities=None):   
+    demands = instance['demands']
+    is_depot = instance['is_depot']
+    duration_matrix = instance['duration_matrix']
+    assert (np.diag(duration_matrix) == 0).all()
+    assert (demands[~is_depot] > 0).all()
+
+    with open(filename, 'w') as f:
+        json.dump(populate_vrptw(instance, name=name, steps=steps, nvehicles=nvehicles, priorities=priorities), f)
+
+
+def run_vroom(instance, tmp_dir, time_limit, explore_level, init_routes=[], nvehicles=None, priorities=None):
+    start_time = time.time()
+    solutions = []
+    executable = os.path.join('baselines', 'vroom', 'bin', 'vroom')
+    instance_filename_json = os.path.join(tmp_dir, "problem_vroom.json")
+    write_json(instance_filename_json, instance, steps=init_routes, nvehicles=nvehicles, priorities=priorities)
+
+    with subprocess.Popen([
+                'timeout', str(time_limit),
+                executable, '-i', instance_filename_json,
+                '-x', str(explore_level),
+                '-t', '1' # single threaded
+            ], stdout=subprocess.PIPE, text=True) as p:
+        try:    # hopefully this prevents issues if vroom finds no solution: we just move to HGS
+            for line in p.stdout:
+                line = line.strip()
+                vroom_output = json.loads(line)
+                cost = int(vroom_output["summary"]["cost"])
+                routes = []
+                for route in vroom_output["routes"]:
+                    routes.append([int(node["location_index"]) for node in route["steps"] if node["type"]=="job"])
+                solutions.append((routes, cost))
+        except:
+            pass
+    
+    solutions.sort(key=lambda x: x[1], reverse=True)
+    
+    return solutions
+
+
+def routesToStr(routes):
+    if len(routes) == 0:
+        return ""
+
+    routesStr = ",".join(str(v) for v in routes[0])
+    for route in routes[1:]:
+        routesStr += "~"
+        routesStr += ",".join(str(v) for v in route)
+    
+    return routesStr

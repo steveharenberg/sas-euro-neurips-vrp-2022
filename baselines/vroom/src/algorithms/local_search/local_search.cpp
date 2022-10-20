@@ -210,7 +210,7 @@ void LocalSearch<Route,
 
       const auto job_priority = current_job.priority;
 
-      if (job_priority < best_priority) {
+      if (job_priority <= best_priority) {
         // Insert higher priority jobs first.
         continue;
       }

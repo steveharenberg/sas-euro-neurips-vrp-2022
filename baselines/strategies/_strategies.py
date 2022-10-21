@@ -139,6 +139,56 @@ def _dist(observation: State,
     # print(mask)
     return _filter_instance(observation, mask)
 
+def _dist_mask(observation: State,
+               rng: np.random.Generator,
+               min_optional_to_dispatch = 2,
+               frac_optional_to_dispatch = 0.80, # TODO: tune
+               fixed_pct = None, # always dispatch when insertion distance is within this relative percentage
+               must_go_ratio = None,
+               n_angles_when_empty=0, # when n_must_go = 0, use this many "must_go" angles
+              ):
+    '''Simple heuristic dispatching a fraction of clients with smallest angular separation from the nearest must-go client.'''
+    mask = np.copy(observation['must_dispatch'])
+    matrix = observation['duration_matrix']
+    n_must_go = sum(mask)
+    if len(mask) <= min_optional_to_dispatch + 1: # no decisions to make
+        return np.ones_like(observation['must_dispatch']).astype(np.bool8)
+    if n_must_go == 0:
+        if n_angles_when_empty == 0:
+            mask = np.copy(observation['must_dispatch'])
+            mask[0] = True
+            return mask
+    optional = ~mask
+    optional[0] = False # depot
+    n_optional = sum(optional)
+    if n_optional <= min_optional_to_dispatch:
+        return np.ones_like(observation['must_dispatch']).astype(np.bool8)
+    n_optional_to_dispatch = max([min_optional_to_dispatch, int(frac_optional_to_dispatch*n_optional)])
+    if must_go_ratio is not None:
+        n_optional_to_dispatch = int(must_go_ratio * n_must_go)
+    if n_optional_to_dispatch >= n_optional:
+        return np.ones_like(observation['must_dispatch']).astype(np.bool8)
+    is_depot = np.copy(observation['is_depot'])
+    candidates = 1 - mask - is_depot
+    assert is_depot[0], "Assuming depot has index 0!"
+    must_go_list = list(compress(range(len(mask)), mask))
+    distance_diffs = np.array([min([(matrix[0][i] + matrix[i][j]) / matrix[0][j] - 1 for j in must_go_list]) for i in range(len(mask))])
+    # sys.stderr.write(str(distance_diffs[optional]))
+    if fixed_pct is not None:
+        # Use a fixed angle to calculate optional dispatches
+        cutoff = fixed_pct
+    else:
+        # Use n_optional_to_dispatch to calculate optional dispatches
+        cutoff = np.partition(distance_diffs[optional], n_optional_to_dispatch-1)[n_optional_to_dispatch-1]
+    mask = (mask | (optional & (distance_diffs <= cutoff)))
+    mask[0] = True
+    # print(mask)
+    return mask
+
+def _rdist_mask(observation: State,
+                rng: np.random.Generator):
+    return _dist_mask(observation, rng, must_go_ratio=5.0)    
+
 
 def _greedy(observation: State, rng: np.random.Generator):
     return {
@@ -173,7 +223,7 @@ def _test(observation: State, rng: np.random.Generator, num_new_requests):
     return _filter_instance(observation, mask)    
 
 
-def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+def _vroom_mask(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
     start_time = time.time()
     
     mask = np.copy(observation['must_dispatch'])
@@ -181,78 +231,66 @@ def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests,
 
     timewi = observation['time_windows'][1:,1]
     priorities = np.zeros((len(mask),1))
-    # if sum(~mask[1:]) > 0:
-    #     mintime = timewi[~mask[1:]].min()
-    #     maxtime = timewi[~mask[1:]].max()
-    #     if maxtime > mintime:
-    #         priorities = (10 - (timewi - mintime) / (maxtime - mintime) * 10).astype(np.int32)
-    #         priorities = np.concatenate(([100], priorities)) # add in priority for depot to make indexing correct
+    if sum(~mask[1:]) > 0:
+        mintime = timewi[~mask[1:]].min()
+        maxtime = timewi[~mask[1:]].max()
+        if maxtime > mintime:
+            priorities = (100 - (timewi - mintime) / (maxtime - mintime) * 100).astype(np.int32)
+            priorities = np.concatenate(([100], priorities)) # add in priority for depot to make indexing correct
     priorities[mask] = 100 # force must_dispatch to highest priority
 
     mustgos = set([x for x in range(len(mask)) if mask[x]])
     if len(mustgos) == 0:
-        return _lazy(observation, rng)
-
-    # warmstart_filepath = os.path.join(args.tmp_dir, "warmstart")
-    # if os.path.isfile(warmstart_filepath):
-    #     os.remove(warmstart_filepath)        
+        mask = np.copy(observation['must_dispatch'])
+        mask[0] = True
+        return mask
 
     # determine nvehicles to satisfy must-gos
     mask[0] = True
     must_instance = _filter_instance(observation, mask)
     solutions = tools.run_vroom(must_instance, args.tmp_dir, time_limit, explore_level=0)
-    nvehicles = len(solutions[-1])
-
-    if len(mustgos) >= 0.33*num_new_requests or totcust / num_new_requests > 2:
-        nvehicles *= 4
-
-    # quickly check rough number of customers that nvehicles routes to
-    # time_remain = int(time_limit - (time.time()-start_time))
-    # solutions = tools.run_vroom(observation, args.tmp_dir, time_remain, explore_level=0, nvehicles=nvehicles)
-    # customers = set([n for route in solutions[0][0] for n in route])
-
-    # if CUSTGOAL > len(customers):
-    #     nvehicles = int(CUSTGOAL * nvehicles / len(customers))
+    nvehicles = len(solutions[-1][0])
 
     # deeper routing to determine final customers
     time_remain = int(time_limit - (time.time()-start_time))
     solutions = tools.run_vroom(observation, args.tmp_dir, time_remain, args.exploreLevel, nvehicles=nvehicles, priorities=priorities)
     if len(solutions) == 0:
-        return _lazy(observation, rng)
+        mask = np.copy(observation['must_dispatch'])
+        mask[0] = True
+        return mask
 
-    # take solution that uses the most must-gos at the best
-    # def mustgo_sortkey(sol):
-    #     routes = sol[0]
-    #     cost = sol[1]
-    #     flat = [n for route in sol[0] for n in route]
-    #     num_mustgos = len(set(flat)&mustgos)
-    #     return (-1*num_mustgos, cost)
-    # solutions.sort(key=mustgo_sortkey)
 
     customers = set([n for route in solutions[0][0] for n in route])
     # print("", file=sys.__stderr__)
     # print(len(customers & mustgos), len(mustgos), file=sys.__stderr__)
-    # exit()
     tovisit = list(customers | mustgos)
     
-    # print(customers, len(customers & mustgos), file=sys.__stderr__)
-
     mask[tovisit] = True
-    instance = _filter_instance(observation, mask)
-
-    # TODO: remap ids so that we can warmstart
-    # OR:
-    # run vroom on new instance to warmstart for hgs
-    # must be run on filtered instance otherwise numbers are off
-    # if time.time() - start_time > 1:
-    #     solutions = tools.run_vroom(instance, args.tmp_dir, time_limit, args.exploreLevel)
-
-    #     warmstart_filepath = os.path.join(args.tmp_dir, "warmstart")
-    #     with open(warmstart_filepath, 'w') as fout:
-    #         for routes, cost in solutions:
-    #             fout.write(tools.routesToStr(routes) + "\n")    
     
+    return mask
+
+def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
+    instance = _filter_instance(observation, mask)
     return instance
+
+def _rdist_vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    instance = _rdist(observation, rng)
+    return _vroom(instance, rng, args, num_new_requests, time_limit)
+
+def _vroom_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    instance = _vroom(observation, rng, args, num_new_requests, time_limit)
+    return _rdist(instance, rng)
+
+def _vroom_or_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
+    mask |= _rdist_mask(observation, rng)
+    return _filter_instance(observation, mask)   
+
+def _vroom_and_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
+    mask &= _rdist_mask(observation, rng)
+    return _filter_instance(observation, mask)      
 
 
 STRATEGIES = dict(
@@ -266,5 +304,8 @@ STRATEGIES = dict(
     lazy=_lazy,
     random=_random,
     vroom=_vroom,
-    test=_test
+    vroom_rdist=_vroom_rdist,
+    rdist_vroom=_rdist_vroom,
+    vroom_or_rdist=_vroom_or_rdist,
+    vroom_and_rdist=_vroom_and_rdist,
 )

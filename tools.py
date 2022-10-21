@@ -393,7 +393,7 @@ def populate_jobs(instance, jobs, priorities):
         if instance["must_dispatch"][i]:
             priority = 100
         if priorities is not None:
-            priority = priorities[i]
+            priority = int(priorities[i])
         if is_depot[i]:
             continue
         jobs.append(
@@ -402,7 +402,7 @@ def populate_jobs(instance, jobs, priorities):
                 "location": coords[i].tolist(),
                 "location_index": int(i),
                 "delivery": [int(demands[i])],
-                "priority": int(priority),
+                "priority": priority,
                 "time_windows": [
                     [
                         CUSTOM_PRECISION * int(time_windows[i][0]),

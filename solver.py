@@ -179,10 +179,10 @@ def run_baseline(args, env, oracle_solution=None):
         os.makedirs(args.tmp_dir, exist_ok=True)
         epoch_instance = observation['epoch_instance']
 
+        num_requests_open = len(epoch_instance['request_idx']) - 1
+        num_new_requests = num_requests_open - num_requests_postponed
         if args.verbose:
             log(f"Epoch {static_info['start_epoch']} <= {observation['current_epoch']} <= {static_info['end_epoch']}", newline=False)
-            num_requests_open = len(epoch_instance['request_idx']) - 1
-            num_new_requests = num_requests_open - num_requests_postponed
             log(f" | Requests: +{num_new_requests:3d} = {num_requests_open:3d}, {epoch_instance['must_dispatch'].sum():3d}/{num_requests_open:3d} must-go...", newline=False, flush=True)
 
         
@@ -194,7 +194,7 @@ def run_baseline(args, env, oracle_solution=None):
             start_time = time.time()
             # Select the requests to dispatch using the strategy
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
-            if args.strategy == "vroom":
+            if "vroom" in args.strategy:
                 epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, args, num_new_requests, epoch_tlim*0.5)
             elif args.strategy == "test":
                 epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, num_new_requests)

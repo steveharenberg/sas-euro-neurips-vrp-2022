@@ -69,8 +69,6 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
     os.makedirs(tmp_dir, exist_ok=True)
     instance_filename = os.path.join(tmp_dir, "problem.vrptw")
     tools.write_vrplib(instance_filename, instance, is_vrptw=True)
-
-    warmstart_filepath = os.path.join(tmp_dir, "warmstart")
     
     executable = os.path.join('baselines', 'hgs_vrptw', 'genvrp')
     # On windows, we may have genvrp.exe
@@ -84,9 +82,6 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
                 executable, instance_filename, str(hgs_max_time), 
                 '-seed', str(seed), '-veh', '-1', '-useWallClockTime', '1'
             ]
-    
-    if os.path.isfile(warmstart_filepath):
-        argList += ['-warmstartFilePath', warmstart_filepath]
     
     # Add all the tunable HGS args
     if args is not None:
@@ -124,7 +119,6 @@ def solve_static_vrptw(instance, time_limit=3600, tmp_dir="tmp", seed=1, args=No
         log("time\tcost")
         for row in time_cost:
             log(f"{row[0]:0.3f}\t{row[1]}")
-
   
         
 

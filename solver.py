@@ -142,7 +142,7 @@ def run_oracle(args, env):
     return total_reward
 
 
-def run_baseline(args, env, oracle_solution=None):
+def run_baseline(args, env, oracle_solution=None, threshold_factor=None):
     # Note: info contains additional info that can be used by your solver
     observation, static_info = env.reset()
     epoch_tlim = static_info['epoch_tlim']
@@ -182,12 +182,14 @@ def run_baseline(args, env, oracle_solution=None):
             cost = tools.validate_dynamic_epoch_solution(epoch_instance, epoch_solution)
         else:
             # Select the requests to dispatch using the strategy
-            if args.verbose:
-                if static_info['is_static']:
+            if static_info['is_static']:
+                if args.verbose:
                     log(f"\nFeature vector = {tools._feature_vector(epoch_instance)}")
-                else:
-                    log(f"\nFeature vector = {tools._feature_vector(static_info['dynamic_context'])}")
-                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
+            else:
+                feature_vector = tools._feature_vector(static_info['dynamic_context'])
+                if args.verbose:
+                log(f"\nFeature vector = {feature_vector}")
+            epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
 
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem

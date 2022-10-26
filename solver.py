@@ -188,7 +188,12 @@ def run_baseline(args, env, oracle_solution=None):
             start_time = time.time()
             # Select the requests to dispatch using the strategy
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
-            if "vroom" in args.strategy:
+            if args.strategy == "fdist_vroom":
+                threshold_schedule = []
+                if 'thresholdSchedule' in args and args.thresholdSchedule is not None:
+                    threshold_schedule = [float(x) for x in args.thresholdSchedule.split(',')]
+                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, observation, static_info, rng, args, num_new_requests, epoch_tlim*0.5, threshold_schedule)
+            elif "vroom" in args.strategy:
                 epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, args, num_new_requests, epoch_tlim*0.5)
             elif 'thresholdSchedule' in args and args.thresholdSchedule is not None:
                 threshold_schedule = [float(x) for x in args.thresholdSchedule.split(',')]

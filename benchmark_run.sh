@@ -74,7 +74,7 @@ instanceDir=instances/ # relative path to instance data files
 resultDir=results/ # relative parent directory to save results files (will create a subdir based on the local git branch name)
 
 # Solver-specific Parameters
-strategy=vroom
+strategy=fdist_vroom
 verboseFlag=""
 
 # Read the list of instances

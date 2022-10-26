@@ -244,25 +244,67 @@ def _vroom_mask(observation: State, rng: np.random.Generator, args, num_new_requ
     
     return mask
 
-def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
-    mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
+def _vroom_mask2(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+    start_time = time.time()
+    
+    mask = np.copy(observation['must_dispatch'])
+    totcust = len(observation['must_dispatch']) - 1
+
+    mustgos = set([x for x in range(len(mask)) if mask[x]])
+    if len(mustgos) == 0:
+        mask = np.copy(observation['must_dispatch'])
+        mask[0] = True
+        return mask
+
+    # determine nvehicles to satisfy must-gos
+    mask[0] = True
+
+    # deeper routing to determine final customers
+    time_remain = int(time_limit - (time.time()-start_time))
+    solutions = tools.run_vroom(observation, args.tmp_dir, time_remain, args.exploreLevel)
+    if len(solutions) == 0:
+        mask = np.copy(observation['must_dispatch'])
+        mask[0] = True
+        return mask
+
+
+    customers = set()
+    for route in solutions[0][0]:
+        # print("", file=sys.__stderr__)
+        # print(route, mustgos, set(route) & mustgos, file=sys.__stderr__)
+        if len(set(route) & mustgos) > 0:
+            customers |= set(route)
+    # print("", file=sys.__stderr__)
+    # print(len(customers & mustgos), len(mustgos), file=sys.__stderr__)
+    tovisit = list(customers | mustgos)
+    
+    mask[tovisit] = True
+    
+    return mask    
+
+def _vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit):
+    mask = _vroom_mask2(observation, rng, args, num_new_requests, time_limit)
     instance = _filter_instance(observation, mask)
     return instance
 
-def _rdist_vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+def _rdist_vroom(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit):
     instance = _rdist(observation, rng)
     return _vroom(instance, rng, args, num_new_requests, time_limit)
 
-def _vroom_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+def _fdist_vroom(epoch_instance, observation, static_info, rng, args, num_new_requests, time_limit, threshold=[]):
+    instance = _fdist({**epoch_instance, 'observation': observation, 'static_info': static_info}, rng, threshold)
+    return _vroom(instance, rng, args, num_new_requests, time_limit)    
+
+def _vroom_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit):
     instance = _vroom(observation, rng, args, num_new_requests, time_limit)
     return _rdist(instance, rng)
 
-def _vroom_or_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+def _vroom_or_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit):
     mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
     mask |= _rdist_mask(observation, rng)
     return _filter_instance(observation, mask)   
 
-def _vroom_and_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):
+def _vroom_and_rdist(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit):
     mask = _vroom_mask(observation, rng, args, num_new_requests, time_limit)
     mask &= _rdist_mask(observation, rng)
     return _filter_instance(observation, mask)      
@@ -281,6 +323,7 @@ STRATEGIES = dict(
     vroom=_vroom,
     vroom_rdist=_vroom_rdist,
     rdist_vroom=_rdist_vroom,
+    fdist_vroom=_fdist_vroom,    
     vroom_or_rdist=_vroom_or_rdist,
     vroom_and_rdist=_vroom_and_rdist,
 )

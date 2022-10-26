@@ -190,10 +190,11 @@ def run_baseline(args, env, oracle_solution=None):
             # TODO improved better strategy (machine learning model?) to decide which non-must requests to dispatch
             if "vroom" in args.strategy:
                 epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, args, num_new_requests, epoch_tlim*0.5)
-            elif args.strategy == "test":
-                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng, num_new_requests)
+            elif 'thresholdSchedule' in args and args.thresholdSchedule is not None:
+                threshold_schedule = [float(x) for x in args.thresholdSchedule.split(',')]
+                epoch_instance_dispatch = STRATEGIES[args.strategy]({**epoch_instance, 'observation': observation, 'static_info': static_info}, rng, threshold_schedule)
             else:
-                epoch_instance_dispatch = STRATEGIES[args.strategy](epoch_instance, rng)
+                epoch_instance_dispatch = STRATEGIES[args.strategy]({**epoch_instance, 'observation': observation, 'static_info': static_info}, rng)
 
             # Run HGS with time limit and get last solution (= best solution found)
             # Note we use the same solver_seed in each epoch: this is sufficient as for the static problem
@@ -202,6 +203,28 @@ def run_baseline(args, env, oracle_solution=None):
             solutions = list(solve_static_vrptw(epoch_instance_dispatch, time_limit=remain_time, tmp_dir=args.tmp_dir, seed=args.solver_seed, args=args))
             assert len(solutions) > 0, f"No solution found during epoch {observation['current_epoch']}"
             epoch_solution, cost = solutions[-1]
+            
+            dynamic_prune = 'pruneRoutes' in args and args.pruneRoutes
+            debug_printing = False
+        
+            if dynamic_prune and not static_info['is_static']:
+                must_go_mask = epoch_instance_dispatch['must_dispatch']
+                matrix = epoch_instance_dispatch['duration_matrix']
+                n_must_go = sum(must_go_mask)
+                optional = ~must_go_mask
+                mask = np.ones_like(epoch_instance_dispatch['must_dispatch']).astype(np.bool8)
+                optional[0] = False # depot
+                n_optional = sum(optional)
+                epoch_solution_pruned = epoch_solution.copy()
+                for route in epoch_solution:
+                    if optional[route].all():
+                        mask[route] = False
+                        epoch_solution_pruned.remove(route)
+                        if debug_printing:
+                            log(f'Pruning route {route}')
+                epoch_instance_dispatch_pruned = tools._filter_instance(epoch_instance_dispatch, mask)
+                epoch_solution = epoch_solution_pruned
+                cost = tools.validate_static_solution(epoch_instance_dispatch, epoch_solution, allow_skipped_customers=True)
 
             # Map HGS solution to indices of corresponding requests
             epoch_solution = [epoch_instance_dispatch['request_idx'][route] for route in epoch_solution]
@@ -277,16 +300,14 @@ if __name__ == "__main__":
     parser.add_argument("--minCircleSectorSizeDegrees", type=int)
     parser.add_argument("--preprocessTimeWindows", type=int)
     parser.add_argument("--useDynamicParameters", type=int)
-    # vroom warmstart
-    parser.add_argument("--exploreLevel", type=int, default=0)
-    parser.add_argument("--warmstartTimeFraction", type=float, default=0.0)
-    parser.add_argument("--maxWarmstartTime", type=float, default=float('inf'))
-    # hgs warmstart
-    parser.add_argument("--nbHgsWarmstarts", type=int, default=0)
-    parser.add_argument("--hgsWarmstartTime", type=float, default=2)
-    parser.add_argument("--hgsWarmstartMode", choices=['BEST', 'BEST_WORST', 'ALL'], default='BEST')
-    # other
-    parser.add_argument("--logTimeCost", action='store_true')
+
+    parser.add_argument("--exploreLevel", type=int, default=0) # vroom
+
+    parser.add_argument("--randomGenerator", type=int)
+    
+    parser.add_argument("--logTimeCost", action='store_true', help="Print (to stderr) output table of time at which each solution cost is achieved.")
+    parser.add_argument("--pruneRoutes", action='store_true', help="Enable to prune routes consisting of optional clients.")
+    parser.add_argument("--thresholdSchedule", type=str)
 
     args, unknown = parser.parse_known_args()
 

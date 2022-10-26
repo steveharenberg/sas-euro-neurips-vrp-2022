@@ -6,23 +6,7 @@ import os, sys
 import tools
 import time
 
-
-def _filter_instance(observation: State, mask: np.ndarray):
-    res = {}
-
-    for key, value in observation.items():
-        if key == 'capacity':
-            res[key] = value
-            continue
-
-        if key == 'duration_matrix':
-            res[key] = value[mask]
-            res[key] = res[key][:, mask]
-            continue
-
-        res[key] = value[mask]
-
-    return res
+from tools import _filter_instance
 
 def angle_diff(a, b, scale=2*math.pi):
     return (b - a + scale/2) % scale - scale/2
@@ -88,8 +72,14 @@ def _angle(observation: State,
     return _filter_instance(observation, mask)
 
 def _fdist(observation: State,
-            rng: np.random.Generator):
-    return _dist(observation, rng, fixed_pct=0.25)
+            rng: np.random.Generator, fixed_pct_schedule=[]):
+    epoch_instance = observation
+    observation, static_info = epoch_instance.pop('observation'), epoch_instance.pop('static_info')
+    epochs_remaining = static_info['end_epoch'] - observation['current_epoch']
+    if epochs_remaining >= len(fixed_pct_schedule):
+        return _dist(epoch_instance, rng, fixed_pct=0.50)
+    else:
+        return _dist(epoch_instance, rng, fixed_pct=fixed_pct_schedule[epochs_remaining])
 
 def _rdist(observation: State,
             rng: np.random.Generator):
@@ -191,10 +181,8 @@ def _rdist_mask(observation: State,
 
 
 def _greedy(observation: State, rng: np.random.Generator):
-    return {
-        **observation,
-        'must_dispatch': np.ones_like(observation['must_dispatch']).astype(np.bool8)
-    }
+    mask = np.ones_like(observation['must_dispatch']).astype(np.bool8)
+    return _filter_instance(observation, mask)
 
 
 def _lazy(observation: State, rng: np.random.Generator):
@@ -208,19 +196,6 @@ def _random(observation: State, rng: np.random.Generator):
     mask = (mask | rng.binomial(1, p=0.5, size=len(mask)).astype(np.bool8))
     mask[0] = True
     return _filter_instance(observation, mask)
-
-
-def _test(observation: State, rng: np.random.Generator, num_new_requests):
-    mask = np.copy(observation['must_dispatch'])
-    nmustgos = sum(mask)
-    if nmustgos >= num_new_requests:
-        return {
-            **observation,
-            'must_dispatch': np.ones_like(observation['must_dispatch']).astype(np.bool8)
-        }        
-
-    mask[0] = True
-    return _filter_instance(observation, mask)    
 
 
 def _vroom_mask(observation: State, rng: np.random.Generator, args, num_new_requests, time_limit=3600):

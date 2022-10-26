@@ -55,10 +55,10 @@ esac
 SOLVER_SEED=212165
 for INSTANCE_SEED in $1
 do
-   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline --solver_seed 212165  --randomGenerator 3 --strategy rdist"
-   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -a $INSTANCE_SEED -d $SOLVER_SEED $EXTRA_ARGS
-   # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_subproblem1 --solver_seed 212165  --randomGenerator 3 --strategy fdist"
+   # EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_baseline --solver_seed 212165  --randomGenerator 3 --strategy rdist"
    # ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -a $INSTANCE_SEED -d $SOLVER_SEED $EXTRA_ARGS
+   EXTRA_ARGS="-t ${DYNAMICFLAG}${PREFIX}_routePruning1 --solver_seed 212165  --randomGenerator 3 --strategy fdist"
+   ./benchmark_run.sh -i $instanceList -n $nw -e $epochTime $staticFlag -a $INSTANCE_SEED -d $SOLVER_SEED $EXTRA_ARGS
 done
 echo "Finished. Tabulating results..."
 

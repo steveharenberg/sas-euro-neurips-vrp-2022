@@ -1,3 +1,3 @@
 #!/bin/bash
 PASSTHRU_ARGS="${@}"
-python solver.py --solver_seed 212165 --pruneRoutes --strategy fdist --thresholdSchedule 1.000,0.9000,0.8100,0.7290,0.6561,0.5905,0.5314,0.4783 --randomGenerator 3 $PASSTHRU_ARGS
+python solver.py --solver_seed 212165 --pruneRoutes --strategy fdist --thresholdSchedule 0.9000,0.8100,0.7290,0.6561,0.5905,0.5314,0.4783,0.4305 --randomGenerator 3 $PASSTHRU_ARGS

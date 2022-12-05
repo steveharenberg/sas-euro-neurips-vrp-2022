@@ -439,19 +439,6 @@ void Genetic::insertUnplannedTasks2(Individual* offspring, std::vector<bool> unp
 				continue;
 			}
 
-			// newDistanceToInsert = params->timeCost.get(c, offspring->chromR[r][0]);
-			// newDistanceFromInsert = params->timeCost.get(c, offspring->chromR[r][0]);
-			// if (earliestArrival + newDistanceFromInsert < params->cli[offspring->chromR[r][0]].latestArrival)
-			// {
-			// 	distanceDelta = params->timeCost.get(0, c) + newDistanceToInsert
-			// 		- params->timeCost.get(0, offspring->chromR[r][0]);
-			// 	if (distanceDelta < bestDistance)
-			// 	{
-			// 		bestDistance = distanceDelta;
-			// 		bestLocation = { r, 0 };
-			// 	}
-			// }
-
 			for (int i = 0; i <= static_cast<int>(offspring->chromR[r].size()); i++)
 			{
 				int previousOnRoute = (i == 0) ? 0 : offspring->chromR[r][i - 1];
@@ -470,18 +457,6 @@ void Genetic::insertUnplannedTasks2(Individual* offspring, std::vector<bool> unp
 					}
 				}
 			}
-
-			// newDistanceToInsert = params->timeCost.get(offspring->chromR[r].back(), c);
-			// if (params->cli[offspring->chromR[r].back()].earliestArrival + newDistanceToInsert < latestArrival)
-			// {
-			// 	distanceDelta = newDistanceToInsert + params->timeCost.get(0, c)
-			// 		- params->timeCost.get(offspring->chromR[r].back(), 0);
-			// 	if (distanceDelta < bestDistance)
-			// 	{
-			// 		bestDistance = distanceDelta;
-			// 		bestLocation = { r, static_cast<int>(offspring->chromR[r].size()) };
-			// 	}
-			// }
 		}
 
 		offspring->chromR[bestLocation.first].insert(
